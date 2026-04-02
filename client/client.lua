@@ -6,10 +6,9 @@
 ╚══════════════════════════════════════════════════════════════════════════════╝
 ]]
 
-local ESX        = exports['es_extended']:getSharedObject()
-local uiOffen    = false
-local npcHandle  = 0
-local animLaeuft = false
+local ESX       = exports['es_extended']:getSharedObject()
+local uiOffen   = false
+local npcHandle = 0
 
 -- ─────────────────────────────────────────────────────────────────────────────
 --  HILFSFUNKTIONEN
@@ -207,15 +206,8 @@ if Config.Shop.BefehlAktiviert then
     TriggerEvent('chat:addSuggestion', '/' .. Config.Shop.Befehl, 'MTJ Rubbellose Shop oeffnen')
 end
 
--- ESC-Taste schließt die UI
-CreateThread(function()
-    while true do
-        Wait(0)
-        if uiOffen and IsControlJustReleased(0, 200) then -- 200 = ESC
-            SchliesseUI()
-        end
-    end
-end)
+-- ESC-Taste: wird direkt im NUI (script.js) abgefangen und per NUI-Callback
+-- an SchliesseUI() weitergeleitet – kein Wait(0)-Thread nötig.
 
 -- ─────────────────────────────────────────────────────────────────────────────
 --  NPC-HÄNDLER
@@ -254,15 +246,17 @@ if Config.Shop.NPCAktiviert then
             EndTextCommandSetBlipName(blip)
         end
 
-        -- Interaktions-Loop
-        while true do
-            Wait(0)
-            local ped    = PlayerPedId()
-            local pedPos = GetEntityCoords(ped)
-            local npcPos = GetEntityCoords(npcHandle)
-            local dist   = #(pedPos - npcPos)
+        -- NPC-Position einmalig cachen – Ped ist eingefroren, bewegt sich nie
+        local npcPos = vector3(px, py, pz)
+        local radius = Config.Shop.NPCInteraktionsRadius
 
-            if dist < Config.Shop.NPCInteraktionsRadius then
+        -- ── Interaktions-Loop (adaptives Wait) ────────────────────────────────
+        --   Weit weg  → Wait(500)  → ~0 ms CPU-Last
+        --   In der Nähe → Wait(0)  → responsives Feedback
+        while true do
+            local dist = #(GetEntityCoords(PlayerPedId()) - npcPos)
+
+            if dist < radius then
                 -- Hinweis-Text anzeigen
                 SetTextFont(4)
                 SetTextProportional(1)
@@ -276,6 +270,10 @@ if Config.Shop.NPCAktiviert then
                 if IsControlJustReleased(0, Config.Shop.NPCInteraktionsTaste) then
                     if uiOffen then SchliesseUI() else OeffneUI() end
                 end
+                Wait(0)
+            else
+                -- Weit entfernt: nur alle 500 ms prüfen (nahezu 0 ms Last)
+                Wait(500)
             end
         end
     end)

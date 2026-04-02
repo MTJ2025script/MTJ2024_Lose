@@ -477,17 +477,19 @@ AddEventHandler('playerDropped', function()
     spielerDaten[source] = nil
 end)
 
--- Tageslimit täglich zurücksetzen (0:00 Uhr)
+-- Tageslimit täglich um 00:00 Uhr zurücksetzen
+-- Berechnet die exakte Wartezeit bis Mitternacht → läuft quasi nie
 CreateThread(function()
     while true do
-        Wait(60000) -- Jede Minute prüfen
-        local stunde  = tonumber(os.date('%H'))
-        local minute  = tonumber(os.date('%M'))
-        if stunde == 0 and minute == 0 then
-            for _, daten in pairs(spielerDaten) do
-                daten.kaeufeHeute = 0
-            end
-            Log('Tageslimits zurueckgesetzt.')
+        -- Sekunden bis zur nächsten Mitternacht berechnen
+        local jetzt       = os.time()
+        local morgen      = os.time({ year = os.date('*t').year, month = os.date('*t').month,
+                                      day  = os.date('*t').day + 1, hour = 0, min = 0, sec = 0 })
+        local bisNacht    = morgen - jetzt       -- in Sekunden
+        Wait(bisNacht * 1000)                    -- in Millisekunden warten
+        for _, daten in pairs(spielerDaten) do
+            daten.kaeufeHeute = 0
         end
+        Log('Tageslimits zurueckgesetzt.')
     end
 end)
