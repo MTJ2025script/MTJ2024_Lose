@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MTJ Rubbellose</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!--  HAUPT-CONTAINER                                                        -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div id="app" class="hidden">
+
+    <!-- Hintergrund-Overlay -->
+    <div id="bgOverlay"></div>
+
+    <!-- Glitzer-Partikel -->
+    <canvas id="glitterCanvas"></canvas>
+
+    <!-- ── HAUPT-PANEL ─────────────────────────────────────────────────── -->
+    <div id="mainPanel">
+
+        <!-- ── HEADER ──────────────────────────────────────────────────── -->
+        <div id="header">
+            <div id="headerLeft">
+                <img id="logoImg" src="" alt="Logo" draggable="false">
+                <div id="titleBlock">
+                    <h1 id="mainTitle">MTJ Rubbellose</h1>
+                    <p id="subTitle">Dein Glück wartet!</p>
+                </div>
+            </div>
+            <div id="headerRight">
+                <div id="jackpotBox">
+                    <span id="jackpotLabel">🏆 JACKPOT</span>
+                    <span id="jackpotValue">$0</span>
+                </div>
+                <button id="closeBtn" onclick="schliesseUI()">✕</button>
+            </div>
+        </div>
+
+        <!-- ── TAB-NAVIGATION ──────────────────────────────────────────── -->
+        <div id="tabNav" role="tablist"></div>
+
+        <!-- ── HAUPT-INHALT ─────────────────────────────────────────────── -->
+        <div id="content">
+
+            <!-- Shop-Ansicht: Lose auswählen -->
+            <div id="shopView">
+                <div id="losCards"></div>
+            </div>
+
+            <!-- Kauf-/Kratz-Ansicht -->
+            <div id="scratchView" class="hidden">
+                <div id="scratchHeader">
+                    <button id="backBtn" onclick="zeigeShop()">← Zurück</button>
+                    <h2 id="scratchTitle"></h2>
+                    <p id="scratchDesc"></p>
+                </div>
+
+                <div id="scratchArea">
+                    <!-- Preis-Panels (liegen unter dem Canvas) -->
+                    <div id="prizeGrid">
+                        <div class="prizePanel" id="panel0">
+                            <span class="panelSymbol"></span>
+                            <span class="panelText"></span>
+                        </div>
+                        <div class="prizePanel" id="panel1">
+                            <span class="panelSymbol"></span>
+                            <span class="panelText"></span>
+                        </div>
+                        <div class="prizePanel" id="panel2">
+                            <span class="panelSymbol"></span>
+                            <span class="panelText"></span>
+                        </div>
+                    </div>
+
+                    <!-- Scratch-Canvas (Rubbelschicht darüber) -->
+                    <canvas id="scratchCanvas"></canvas>
+
+                    <!-- Fortschrittsbalken -->
+                    <div id="scratchProgressWrap">
+                        <div id="scratchProgressBar"></div>
+                        <span id="scratchProgressText">0% aufgedeckt</span>
+                    </div>
+                </div>
+
+                <!-- Kauf-Button -->
+                <div id="buySection">
+                    <p id="buyInfo"></p>
+                    <button id="buyBtn" onclick="kaufeLos()">
+                        <span id="buyBtnIcon">🎟️</span>
+                        <span id="buyBtnText">Los kaufen</span>
+                    </button>
+                </div>
+            </div>
+
+        </div><!-- /content -->
+
+        <!-- ── GEWINNER-TICKER ──────────────────────────────────────────── -->
+        <div id="tickerWrap">
+            <div id="tickerLabel">🏅 Letzte Gewinner:</div>
+            <div id="tickerTrack">
+                <div id="tickerInner"></div>
+            </div>
+        </div>
+
+        <!-- ── FOOTER ──────────────────────────────────────────────────── -->
+        <div id="footer">
+            <span id="copyrightText">© MTJ2024 · Rubbellose System</span>
+        </div>
+
+    </div><!-- /mainPanel -->
+
+    <!-- ── ERGEBNIS-OVERLAY (Gewinn / Niete) ───────────────────────────── -->
+    <div id="resultOverlay" class="hidden">
+        <canvas id="konfettiCanvas"></canvas>
+        <div id="resultBox">
+            <div id="resultIcon"></div>
+            <h2 id="resultTitle"></h2>
+            <p  id="resultText"></p>
+            <div id="resultBtns">
+                <button id="resultNochmal" onclick="nochmal()">🎟️ Nochmal</button>
+                <button id="resultClose"   onclick="schliesseUI()">✕ Schließen</button>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /app -->
+
+<script src="script.js"></script>
+</body>
+</html>
