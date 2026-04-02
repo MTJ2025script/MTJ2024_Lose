@@ -113,6 +113,28 @@
 
     </div><!-- /mainPanel -->
 
+    <!-- ── KAUF-OVERLAY (rotierendes Ticket beim Kauf) ──────────────────── -->
+    <div id="buyOverlay" class="hidden">
+        <div id="buyOverlayInner">
+            <div id="spinTicket">🎟️</div>
+            <div id="buyOverlayTitle">Los wird gekauft…</div>
+            <div id="buyOverlaySub">Server bestätigt deinen Kauf</div>
+            <div class="loadDots"><span></span><span></span><span></span></div>
+        </div>
+    </div>
+
+    <!-- ── COUNTDOWN (3 · 2 · 1 · RUBBELN!) ────────────────────────────── -->
+    <div id="countdownOverlay" class="hidden">
+        <div id="countdownNumber">3</div>
+        <div id="countdownText">Mach dich bereit!</div>
+    </div>
+
+    <!-- ── WIN-FLASH ────────────────────────────────────────────────────── -->
+    <div id="winFlash"></div>
+
+    <!-- ── SPARK-CANVAS (Funken beim Rubbeln) ───────────────────────────── -->
+    <canvas id="sparkCanvas"></canvas>
+
     <!-- ── ERGEBNIS-OVERLAY (Gewinn / Niete) ───────────────────────────── -->
     <div id="resultOverlay" class="hidden">
         <canvas id="konfettiCanvas"></canvas>
