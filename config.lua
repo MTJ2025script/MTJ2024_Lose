@@ -27,8 +27,42 @@ Config.Debug                        = false                 -- [ Debug-Modus akt
 Config.Sprache                      = 'de'                  -- [ Sprache der Texte: 'de' (nur Deutsch verfuegbar) ]
 Config.Waehrung                     = '$'                   -- [ Waehrungszeichen vor dem Betrag ]
 Config.WaehrungNachBetrag           = false                 -- [ Waehrungszeichen nach dem Betrag (true/false) ]
-Config.BenachrichtigungTyp          = 'esx'                 -- [ Benachrichtigung: 'esx' = Standard ESX ]
+Config.BenachrichtigungTyp          = 'custom'              -- [ 'custom' = eigenes Design | 'esx' = ESX Standard ]
 Config.Copyright                    = '© MTJ2024'           -- [ Copyright-Anzeige in der UI ]
+
+-- ╔══════════════════════════════════════════════════════════════════════════╗
+-- ║               BENACHRICHTIGUNGS-EINSTELLUNGEN  (Custom Notify)          ║
+-- ╚══════════════════════════════════════════════════════════════════════════╝
+
+Config.Notify = {
+
+    -- ── Allgemein ────────────────────────────────────────────────────────────
+    Position                        = 'top-right',          -- [ Position: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' ]
+    Dauer                           = 5000,                 -- [ Standard-Anzeigedauer in Millisekunden ]
+    MaxAnzahl                       = 5,                    -- [ Maximale gleichzeitige Benachrichtigungen ]
+    FortschrittBalken               = true,                 -- [ Countdown-Balken anzeigen (true/false) ]
+    EinblendAnimation               = 'slide',              -- [ Animation: 'slide' | 'fade' | 'bounce' ]
+
+    -- ── Icons je Typ ─────────────────────────────────────────────────────────
+    Icons = {
+        success                     = '✅',                  -- [ Icon fuer Erfolg ]
+        error                       = '❌',                  -- [ Icon fuer Fehler ]
+        info                        = 'ℹ️',                  -- [ Icon fuer Info ]
+        warning                     = '⚠️',                  -- [ Icon fuer Warnung ]
+        jackpot                     = '🏆',                  -- [ Icon fuer Jackpot ]
+        item                        = '🎁',                  -- [ Icon fuer Item-Gewinn ]
+    },
+
+    -- ── Farben je Typ ────────────────────────────────────────────────────────
+    Farben = {
+        success                     = '#00ff88',            -- [ Farbe Erfolg ]
+        error                       = '#ff4444',            -- [ Farbe Fehler ]
+        info                        = '#4FC3F7',            -- [ Farbe Info ]
+        warning                     = '#FFB300',            -- [ Farbe Warnung ]
+        jackpot                     = '#FFD700',            -- [ Farbe Jackpot ]
+        item                        = '#CE93D8',            -- [ Farbe Item ]
+    },
+}
 
 -- ╔══════════════════════════════════════════════════════════════════════════╗
 -- ║                    UI / DARSTELLUNG EINSTELLUNGEN                       ║

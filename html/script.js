@@ -779,6 +779,103 @@ function aktualisiereTicker() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+//  CUSTOM NOTIFY SYSTEM
+// ─────────────────────────────────────────────────────────────────────────────
+
+const MTJNotify = (() => {
+    let container = null;
+    let cfg = {
+        position:       'top-right',
+        dauer:          5000,
+        maxAnzahl:      5,
+        fortschritt:    true,
+        animation:      'slide',
+        icons:  { success:'✅', error:'❌', info:'ℹ️', warning:'⚠️', jackpot:'🏆', item:'🎁' },
+        titles: { success:'Erfolg', error:'Fehler', info:'Info', warning:'Hinweis', jackpot:'JACKPOT!', item:'Gewinn' },
+    };
+
+    // Config aus Lua-Nachricht setzen
+    function init(notifyCfg) {
+        container = document.getElementById('mtjNotifyContainer');
+        if (!container) return;
+        if (notifyCfg) {
+            cfg.position    = notifyCfg.Position   || cfg.position;
+            cfg.dauer       = notifyCfg.Dauer       || cfg.dauer;
+            cfg.maxAnzahl   = notifyCfg.MaxAnzahl   || cfg.maxAnzahl;
+            cfg.fortschritt = notifyCfg.FortschrittBalken !== false;
+            cfg.animation   = (notifyCfg.EinblendAnimation || 'slide').toLowerCase();
+            if (notifyCfg.Icons)  Object.assign(cfg.icons,  notifyCfg.Icons);
+        }
+        container.className = cfg.position;
+    }
+
+    // Benachrichtigung anzeigen
+    function show(text, typ, dauer) {
+        if (!container) { container = document.getElementById('mtjNotifyContainer'); }
+        if (!container) return;
+        typ   = typ   || 'info';
+        dauer = dauer || cfg.dauer;
+
+        // Überzählige entfernen
+        const existing = container.querySelectorAll('.mtj-notify');
+        if (existing.length >= cfg.maxAnzahl) {
+            _dismiss(existing[0], true);
+        }
+
+        const icon  = cfg.icons[typ]  || 'ℹ️';
+        const title = cfg.titles[typ] || 'Info';
+
+        const el = document.createElement('div');
+        el.className = `mtj-notify type-${typ}`;
+        if (cfg.animation !== 'slide') el.classList.add(`anim-${cfg.animation}`);
+
+        el.innerHTML = `
+            <div class="mtj-notify-icon">${icon}</div>
+            <div class="mtj-notify-body">
+                <div class="mtj-notify-title">${title}</div>
+                <div class="mtj-notify-text">${text}</div>
+            </div>
+            <button class="mtj-notify-close" title="Schließen">✕</button>
+            ${cfg.fortschritt ? '<div class="mtj-notify-progress"></div>' : ''}
+        `;
+
+        // Schließen-Button
+        el.querySelector('.mtj-notify-close').addEventListener('click', () => _dismiss(el));
+
+        // Klick auf Benachrichtigung schließt sie auch
+        el.addEventListener('click', e => {
+            if (!e.target.classList.contains('mtj-notify-close')) _dismiss(el);
+        });
+
+        container.appendChild(el);
+
+        // Fortschrittsbalken animieren
+        if (cfg.fortschritt) {
+            const bar = el.querySelector('.mtj-notify-progress');
+            if (bar) {
+                bar.style.width = '100%';
+                bar.style.transition = `width ${dauer}ms linear`;
+                requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.width = '0%'; }));
+            }
+        }
+
+        // Auto-Dismiss
+        el._timeout = setTimeout(() => _dismiss(el), dauer);
+    }
+
+    function _dismiss(el, sofort = false) {
+        if (!el || el._dismissed) return;
+        el._dismissed = true;
+        clearTimeout(el._timeout);
+        if (sofort) { el.remove(); return; }
+        el.classList.add('out');
+        setTimeout(() => el.remove(), 320);
+    }
+
+    return { init, show };
+})();
+
+// ─────────────────────────────────────────────────────────────────────────────
 //  NUI-MESSAGE-HANDLER (von Client-Lua)
 // ─────────────────────────────────────────────────────────────────────────────
 window.addEventListener('message', (event) => {
@@ -804,6 +901,14 @@ window.addEventListener('message', (event) => {
 
         case 'gewinnerTicker':
             gewinnerTicker(data.daten || {});
+            break;
+
+        case 'notify':
+            MTJNotify.show(data.text, data.typ, data.dauer);
+            break;
+
+        case 'notifyInit':
+            MTJNotify.init(data.config);
             break;
     }
 });

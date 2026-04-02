@@ -41,19 +41,32 @@ local function StoppeAnimation()
     ClearPedTasks(PlayerPedId())
 end
 
-local function ZeigeNachricht(text, typ)
-    if Config.BenachrichtigungTyp == 'esx' then
-        if typ == 'success' then
-            ESX.ShowNotification(text)
-        elseif typ == 'error' then
-            ESX.ShowNotification('~r~' .. text)
-        elseif typ == 'jackpot' then
-            ESX.ShowNotification('~y~' .. text)
-        else
-            ESX.ShowNotification(text)
-        end
+-- ─────────────────────────────────────────────────────────────────────────────
+--  ZENTRALES CUSTOM NOTIFY SYSTEM
+--  Alle Benachrichtigungen laufen durch diese Funktion.
+--  Typ:  'success' | 'error' | 'info' | 'warning' | 'jackpot' | 'item'
+-- ─────────────────────────────────────────────────────────────────────────────
+
+local function ZeigeNachricht(text, typ, dauer)
+    typ   = typ   or 'info'
+    dauer = dauer or (Config.Notify and Config.Notify.Dauer or 5000)
+
+    if Config.BenachrichtigungTyp == 'custom' then
+        -- Custom NUI Notify (läuft auch wenn UI geschlossen ist)
+        SendNUIMessage({
+            action = 'notify',
+            text   = text,
+            typ    = typ,
+            dauer  = dauer,
+        })
     else
-        ESX.ShowNotification(text)
+        -- Fallback: ESX Standard
+        local prefix = ''
+        if typ == 'error'   then prefix = '~r~'
+        elseif typ == 'success' or typ == 'jackpot' then prefix = '~g~'
+        elseif typ == 'warning' then prefix = '~y~'
+        end
+        ESX.ShowNotification(prefix .. text)
     end
 end
 
@@ -68,6 +81,12 @@ local function OeffneUI()
 
     -- Jackpot-Wert vom Server holen
     TriggerServerEvent('MTJ_Lose:JackpotAnfrage')
+
+    -- Notify-System initialisieren (Config weitergeben)
+    SendNUIMessage({
+        action = 'notifyInit',
+        config = Config.Notify,
+    })
 
     -- Lose-Konfiguration und UI-Einstellungen an NUI senden
     SendNUIMessage({
@@ -162,7 +181,7 @@ RegisterNetEvent('MTJ_Lose:JackpotUpdate', function(betrag)
     SendNUIMessage({ action = 'jackpotUpdate', betrag = betrag })
 end)
 
--- Benachrichtigung vom Server anzeigen
+-- Benachrichtigung vom Server anzeigen (funktioniert auch ohne offene UI)
 RegisterNetEvent('MTJ_Lose:Benachrichtigung', function(text, typ)
     ZeigeNachricht(text, typ)
 end)
@@ -268,7 +287,7 @@ end
 
 if Config.Shop.ItemSystemAktiviert then
     for _, los in ipairs(Config.Lose) do
-        local losId = los.id
+        local losId   = los.id
         local losItem = los.item
         ESX.RegisterUsableItem(losItem, function(source)
             TriggerServerEvent('MTJ_Lose:BenutzeItem', losId)
@@ -276,3 +295,19 @@ if Config.Shop.ItemSystemAktiviert then
         end)
     end
 end
+
+-- ─────────────────────────────────────────────────────────────────────────────
+--  RESSOURCEN-START: Notify-System sofort initialisieren
+--  (funktioniert auch OHNE geöffnete UI)
+-- ─────────────────────────────────────────────────────────────────────────────
+
+AddEventHandler('onClientResourceStart', function(res)
+    if res ~= GetCurrentResourceName() then return end
+    -- Kurz warten bis NUI bereit ist
+    Wait(500)
+    SendNUIMessage({
+        action = 'notifyInit',
+        config = Config.Notify,
+    })
+    Log('Notify-System initialisiert (Position: ' .. (Config.Notify and Config.Notify.Position or 'top-right') .. ')')
+end)

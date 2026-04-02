@@ -838,3 +838,164 @@ html, body {
 #scratchCanvas.is-scratching {
     cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='18' fill='rgba(255,215,0,0.4)' stroke='%23FFD700' stroke-width='2.5'/%3E%3Ccircle cx='20' cy='20' r='5' fill='%23FFD700'/%3E%3C/svg%3E") 20 20, crosshair;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CUSTOM NOTIFY SYSTEM – MTJ2024
+   Immer sichtbar · Zentrales Design · Benutzerfreundlich
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Container (Position per JS gesetzt) ────────────────────────────────────── */
+#mtjNotifyContainer {
+    position:       fixed;
+    z-index:        999999;
+    display:        flex;
+    flex-direction: column;
+    gap:            10px;
+    pointer-events: none;
+    max-width:      360px;
+    width:          100%;
+}
+
+/* Positions-Klassen (wird per config gesetzt) */
+#mtjNotifyContainer.top-right    { top: 22px; right: 22px; align-items: flex-end; }
+#mtjNotifyContainer.top-left     { top: 22px; left:  22px; align-items: flex-start; }
+#mtjNotifyContainer.bottom-right { bottom: 22px; right: 22px; align-items: flex-end;   flex-direction: column-reverse; }
+#mtjNotifyContainer.bottom-left  { bottom: 22px; left:  22px; align-items: flex-start; flex-direction: column-reverse; }
+
+/* ── Einzelne Benachrichtigung ─────────────────────────────────────────────── */
+.mtj-notify {
+    position:       relative;
+    display:        flex;
+    align-items:    flex-start;
+    gap:            12px;
+    padding:        14px 16px 18px;
+    background:     rgba(13, 13, 26, 0.96);
+    border:         1px solid var(--notify-color, rgba(255,215,0,0.3));
+    border-left:    4px solid var(--notify-color, #FFD700);
+    border-radius:  12px;
+    box-shadow:     0 6px 30px rgba(0,0,0,0.6),
+                    0 0 0 1px rgba(255,255,255,0.04),
+                    0 0 20px var(--notify-glow, rgba(255,215,0,0.08));
+    backdrop-filter: blur(12px);
+    min-width:      280px;
+    max-width:      360px;
+    overflow:       hidden;
+    pointer-events: all;
+    font-family:    'Segoe UI', Arial, sans-serif;
+
+    /* Einblend-Animation */
+    animation: notifySlideIn 0.35s cubic-bezier(.175,.885,.32,1.275) forwards;
+}
+
+.mtj-notify.out {
+    animation: notifySlideOut 0.3s cubic-bezier(.4,0,.2,1) forwards !important;
+}
+
+/* Slide-Variante */
+@keyframes notifySlideIn {
+    from { opacity: 0; transform: translateX(110%); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes notifySlideOut {
+    from { opacity: 1; transform: translateX(0);    max-height: 120px; margin-bottom: 0; }
+    to   { opacity: 0; transform: translateX(110%); max-height: 0;     margin-bottom: -10px; }
+}
+
+/* Fade-Variante */
+.mtj-notify.anim-fade { animation: notifyFadeIn 0.3s ease forwards; }
+.mtj-notify.anim-fade.out { animation: notifyFadeOut 0.3s ease forwards !important; }
+@keyframes notifyFadeIn  { from { opacity:0; transform:scale(.92); } to { opacity:1; transform:scale(1); } }
+@keyframes notifyFadeOut { from { opacity:1; } to { opacity:0; transform:scale(.88); } }
+
+/* Bounce-Variante */
+.mtj-notify.anim-bounce { animation: notifyBounceIn 0.45s cubic-bezier(.175,.885,.32,1.275) forwards; }
+@keyframes notifyBounceIn { from { opacity:0; transform:scale(.5); } 70% { transform:scale(1.08); } to { opacity:1; transform:scale(1); } }
+
+/* Links-Variante (für top-left / bottom-left) */
+#mtjNotifyContainer.top-left    .mtj-notify,
+#mtjNotifyContainer.bottom-left .mtj-notify {
+    animation: notifySlideInLeft 0.35s cubic-bezier(.175,.885,.32,1.275) forwards;
+}
+#mtjNotifyContainer.top-left    .mtj-notify.out,
+#mtjNotifyContainer.bottom-left .mtj-notify.out {
+    animation: notifySlideOutLeft 0.3s cubic-bezier(.4,0,.2,1) forwards !important;
+}
+@keyframes notifySlideInLeft  { from { opacity:0; transform:translateX(-110%); } to { opacity:1; transform:translateX(0); } }
+@keyframes notifySlideOutLeft { from { opacity:1; transform:translateX(0);    } to { opacity:0; transform:translateX(-110%); } }
+
+/* ── Icon ─────────────────────────────────────────────────────────────────── */
+.mtj-notify-icon {
+    font-size:   1.6rem;
+    line-height: 1;
+    flex-shrink: 0;
+    margin-top:  1px;
+    filter:      drop-shadow(0 0 6px var(--notify-color, #FFD700));
+}
+
+/* ── Textbereich ──────────────────────────────────────────────────────────── */
+.mtj-notify-body {
+    flex:        1;
+    min-width:   0;
+    display:     flex;
+    flex-direction: column;
+    gap:         3px;
+}
+
+.mtj-notify-title {
+    font-size:   0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color:       var(--notify-color, #FFD700);
+    opacity:     0.9;
+}
+
+.mtj-notify-text {
+    font-size:   0.9rem;
+    font-weight: 500;
+    color:       #e8e8f0;
+    line-height: 1.4;
+    word-break:  break-word;
+}
+
+/* ── Schließen-Button ─────────────────────────────────────────────────────── */
+.mtj-notify-close {
+    position:   absolute;
+    top:        8px;
+    right:      10px;
+    background: transparent;
+    border:     none;
+    color:      rgba(255,255,255,0.3);
+    font-size:  0.8rem;
+    cursor:     pointer;
+    line-height:1;
+    transition: color 0.2s;
+    padding:    2px 4px;
+}
+.mtj-notify-close:hover { color: rgba(255,255,255,0.8); }
+
+/* ── Fortschritts-Balken ──────────────────────────────────────────────────── */
+.mtj-notify-progress {
+    position:      absolute;
+    bottom:        0;
+    left:          0;
+    height:        3px;
+    background:    var(--notify-color, #FFD700);
+    box-shadow:    0 0 6px var(--notify-color, #FFD700);
+    border-radius: 0 0 0 8px;
+    transform-origin: left;
+    transition:    width linear;
+}
+
+/* ── Typen-spezifische Hintergründe ─────────────────────────────────────── */
+.mtj-notify.type-success { --notify-color: #00ff88; --notify-glow: rgba(0,255,136,0.12); background: rgba(0,20,12,0.96); }
+.mtj-notify.type-error   { --notify-color: #ff4444; --notify-glow: rgba(255,68,68,0.12);  background: rgba(22,5,5,0.96);  }
+.mtj-notify.type-info    { --notify-color: #4FC3F7; --notify-glow: rgba(79,195,247,0.1);  background: rgba(5,15,25,0.96); }
+.mtj-notify.type-warning { --notify-color: #FFB300; --notify-glow: rgba(255,179,0,0.12);  background: rgba(22,15,0,0.96); }
+.mtj-notify.type-jackpot { --notify-color: #FFD700; --notify-glow: rgba(255,107,53,0.2);  background: rgba(20,10,0,0.97); animation: notifySlideIn 0.35s cubic-bezier(.175,.885,.32,1.275) forwards, notifyJackpotPulse 1.2s 0.4s ease-in-out infinite alternate; }
+.mtj-notify.type-item    { --notify-color: #CE93D8; --notify-glow: rgba(206,147,216,0.1); background: rgba(15,5,22,0.96); }
+
+@keyframes notifyJackpotPulse {
+    0%   { box-shadow: 0 6px 30px rgba(0,0,0,.6), 0 0 20px rgba(255,107,53,0.15); }
+    100% { box-shadow: 0 6px 30px rgba(0,0,0,.6), 0 0 40px rgba(255,215,0,0.4);   }
+}
