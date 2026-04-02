@@ -209,9 +209,12 @@ if Config.Shop.NPCAktiviert then
         RequestModel(model)
         while not HasModelLoaded(model) do Wait(100) end
 
-        -- NPC spawnen
-        local pos = Config.Shop.NPCPosition
-        npcHandle = CreatePed(4, model, pos.x, pos.y, pos.z - 1.0, pos.w, false, true)
+        -- Coords aus vec4 auslesen  (vec4 / vector4 identisch in FiveM)
+        local coords  = Config.Shop.NPCPosition
+        local px, py, pz, heading = coords.x, coords.y, coords.z, coords.w
+
+        -- NPC spawnen (z leicht abgesenkt für sauberes Stehen auf dem Boden)
+        npcHandle = CreatePed(4, model, px, py, pz - 1.0, heading, false, true)
         SetEntityInvincible(npcHandle, true)
         SetBlockingOfNonTemporaryEvents(npcHandle, true)
         SetPedCanRagdoll(npcHandle, false)
@@ -222,7 +225,7 @@ if Config.Shop.NPCAktiviert then
 
         -- Blip
         if Config.Shop.BlipAktiviert then
-            local blip = AddBlipForCoord(pos.x, pos.y, pos.z)
+            local blip = AddBlipForCoord(px, py, pz)
             SetBlipSprite(blip, Config.Shop.BlipSprite)
             SetBlipColour(blip, Config.Shop.BlipFarbe)
             SetBlipScale(blip, Config.Shop.BlipMassstab)

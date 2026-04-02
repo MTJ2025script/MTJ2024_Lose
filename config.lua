@@ -195,9 +195,14 @@ Config.Shop = {
     -- ── NPC-Haendler ────────────────────────────────────────────────────────
     NPCAktiviert                    = true,                 -- [ NPC-Haendler auf der Karte spawnen (true/false) ]
     NPCModel                        = 'a_m_m_business_01', -- [ NPC-Ped-Modell (GTA V Modellname) ]
-    NPCPosition                     = vector4(             -- [ NPC-Position: x, y, z, Richtung(heading) ]
-        -1393.98, -581.20, 30.32, 305.0
-    ),
+
+    -- ┌─────────────────────────────────────────────────────────────────────┐
+    -- │  COORDS EINSTELLEN:  vec4(x, y, z, heading)                        │
+    -- │  Tipp: Im Spiel /coords eingeben → Werte kopieren                  │
+    -- │  Heading = Blickrichtung in Grad (0-360)                           │
+    -- └─────────────────────────────────────────────────────────────────────┘
+    NPCPosition                     = vec4(-1393.98, -581.20, 30.32, 305.0), -- [ vec4(x, y, z, heading) ]
+
     NPCInteraktionsRadius           = 2.5,                  -- [ Radius in dem der NPC ansprechbar ist (Meter) ]
     NPCInteraktionsTaste            = 38,                   -- [ GTA-Steuerungsindex (38 = E-Taste) ]
 
