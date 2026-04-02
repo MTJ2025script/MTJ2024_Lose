@@ -125,10 +125,9 @@ local function BerechneGewinn(source, losConfig)
     end
 
     local zufall = math.random() * gesamtGewicht
-    local kumuliert = 0
     for _, eintrag in ipairs(tabelle) do
-        kumuliert = kumuliert + eintrag.gewinn.chance * (eintrag.gewinn.typ ~= 'nichts' and multiplikator or 1.0)
-        if zufall <= kumuliert then
+        -- Vorberechnete kumulative Gewichte verwenden (korrekte Wahrscheinlichkeitsverteilung)
+        if zufall <= eintrag.kumuliert then
             return eintrag.gewinn
         end
     end

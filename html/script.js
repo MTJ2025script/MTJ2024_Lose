@@ -445,13 +445,17 @@ function baueUI(lose, uiCfg) {
         bgEl.style.backgroundColor  = 'rgba(8,8,20,0.96)';
     }
 
-    // Logo
+    // Logo – nur sichere relative Pfade oder data-URIs erlaubt
     const logoEl = El.logoImg();
     if (uiCfg.LogoAktiviert && uiCfg.Logo) {
-        logoEl.src    = uiCfg.Logo;
-        logoEl.width  = uiCfg.LogoBreite || 160;
-        logoEl.height = uiCfg.LogoHoehe  || 60;
-        logoEl.style.display = 'block';
+        const logoSrc = String(uiCfg.Logo);
+        // Nur relative Pfade und data:-URIs akzeptieren (kein http/javascript)
+        if (/^(data:|img\/|\.\/)/i.test(logoSrc) || !logoSrc.includes(':')) {
+            logoEl.src            = logoSrc;
+            logoEl.width          = parseInt(uiCfg.LogoBreite, 10) || 160;
+            logoEl.height         = parseInt(uiCfg.LogoHoehe,  10) || 60;
+            logoEl.style.display  = 'block';
+        }
     } else {
         logoEl.style.display = 'none';
     }
@@ -501,16 +505,32 @@ function baueKarten(lose) {
         // Glow-Layer
         const glow = document.createElement('div');
         glow.className = 'losCardGlow';
-        glow.style.background = `radial-gradient(circle at 50% 50%, ${(los.farbe || '#FFD700')}22, transparent 70%)`;
+        glow.style.background = `radial-gradient(circle at 50% 50%, ${_sanitizeColor(los.farbe)}22, transparent 70%)`;
         card.appendChild(glow);
 
-        card.innerHTML += `
-            <div class="losCardSymbol">${los.symbol || '🎟️'}</div>
-            <div class="losCardName">${los.name}</div>
-            <div class="losCardDesc">${los.beschreibung || ''}</div>
-            <div class="losCardPreis" style="color:${los.farbe || '#FFD700'}">${formatGeld(los.preis)}</div>
-            <div class="losCardMaxGewinn">bis zu ${formatGeld(los.maxGewinn)} 🚀</div>
-        `;
+        // Karten-Inhalt sicher per DOM aufbauen (kein innerHTML mit Userdaten)
+        const symEl = document.createElement('div');
+        symEl.className   = 'losCardSymbol';
+        symEl.textContent = los.symbol || '🎟️';
+
+        const nameEl = document.createElement('div');
+        nameEl.className   = 'losCardName';
+        nameEl.textContent = los.name || '';
+
+        const descEl = document.createElement('div');
+        descEl.className   = 'losCardDesc';
+        descEl.textContent = los.beschreibung || '';
+
+        const preisEl = document.createElement('div');
+        preisEl.className = 'losCardPreis';
+        preisEl.style.color = _sanitizeColor(los.farbe);
+        preisEl.textContent = formatGeld(los.preis);
+
+        const maxEl = document.createElement('div');
+        maxEl.className   = 'losCardMaxGewinn';
+        maxEl.textContent = `bis zu ${formatGeld(los.maxGewinn)} 🚀`;
+
+        card.append(symEl, nameEl, descEl, preisEl, maxEl);
         card.addEventListener('click', () => waehleLos(los, true));
         container.appendChild(card);
     });
@@ -779,6 +799,29 @@ function aktualisiereTicker() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+//  SANITIZE-HILFSFUNKTIONEN (Security)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Erlaubt nur gültige CSS-Farben (hex, rgb, hsl, named) – verhindert CSS-Injection */
+function _sanitizeColor(raw) {
+    const s = String(raw || '#FFD700').trim();
+    return /^(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\)|[a-zA-Z]{1,30})$/.test(s)
+        ? s : '#FFD700';
+}
+
+/** Erlaubt nur bekannte Notify-Typen */
+function _sanitizeTyp(raw) {
+    const allowed = ['success', 'error', 'info', 'warning', 'jackpot', 'item'];
+    return allowed.includes(String(raw)) ? String(raw) : 'info';
+}
+
+/** Erlaubt nur bekannte Animations-Namen */
+function _sanitizeAnimation(raw) {
+    const allowed = ['slide', 'fade', 'bounce'];
+    return allowed.includes(String(raw)) ? String(raw) : 'slide';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 //  CUSTOM NOTIFY SYSTEM
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -826,18 +869,39 @@ const MTJNotify = (() => {
         const title = cfg.titles[typ] || 'Info';
 
         const el = document.createElement('div');
-        el.className = `mtj-notify type-${typ}`;
-        if (cfg.animation !== 'slide') el.classList.add(`anim-${cfg.animation}`);
+        el.className = `mtj-notify type-${_sanitizeTyp(typ)}`;
+        if (cfg.animation !== 'slide') el.classList.add(`anim-${_sanitizeAnimation(cfg.animation)}`);
 
-        el.innerHTML = `
-            <div class="mtj-notify-icon">${icon}</div>
-            <div class="mtj-notify-body">
-                <div class="mtj-notify-title">${title}</div>
-                <div class="mtj-notify-text">${text}</div>
-            </div>
-            <button class="mtj-notify-close" title="Schließen">✕</button>
-            ${cfg.fortschritt ? '<div class="mtj-notify-progress"></div>' : ''}
-        `;
+        // Struktur sicher per DOM aufbauen
+        const iconEl  = document.createElement('div');
+        iconEl.className   = 'mtj-notify-icon';
+        iconEl.textContent = icon;
+
+        const bodyEl  = document.createElement('div');
+        bodyEl.className = 'mtj-notify-body';
+
+        const titleEl = document.createElement('div');
+        titleEl.className   = 'mtj-notify-title';
+        titleEl.textContent = title;
+
+        const textEl  = document.createElement('div');
+        textEl.className   = 'mtj-notify-text';
+        textEl.textContent = text;  // textContent verhindert XSS
+
+        bodyEl.append(titleEl, textEl);
+
+        const closeBtn = document.createElement('button');
+        closeBtn.className   = 'mtj-notify-close';
+        closeBtn.title       = 'Schließen';
+        closeBtn.textContent = '✕';
+
+        el.append(iconEl, bodyEl, closeBtn);
+
+        if (cfg.fortschritt) {
+            const bar = document.createElement('div');
+            bar.className = 'mtj-notify-progress';
+            el.appendChild(bar);
+        }
 
         // Schließen-Button
         el.querySelector('.mtj-notify-close').addEventListener('click', () => _dismiss(el));
