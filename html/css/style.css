@@ -12,8 +12,9 @@ body {
     background: transparent;
     overflow: hidden;
     user-select: none;
-    /* Verhindert, dass das NUI-Frame Mauseingaben blockiert, wenn die UI geschlossen ist */
     pointer-events: none;
+    /* NUI-Frame komplett unsichtbar wenn UI geschlossen – einziger zuverlässiger Fix für FiveM CEF */
+    display: none;
 }
 
 .hidden {

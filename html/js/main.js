@@ -38,6 +38,10 @@ function openTicket(data) {
     currentItem  = data.itemName;
     scratchDone  = false;
 
+    // Body sichtbar machen (war per CSS versteckt)
+    document.body.style.display = 'block';
+    document.body.style.pointerEvents = 'auto';
+
     // Ticket-Hintergrund setzen
     const bg = document.getElementById('ticket-bg');
     if (data.ticketBg && data.ticketBg !== '') {
@@ -309,4 +313,8 @@ function resetUI() {
     if (canvas && ctx) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
+
+    // Body wieder verstecken – verhindert jedes sichtbare Rendering im Spiel
+    document.body.style.display = 'none';
+    document.body.style.pointerEvents = 'none';
 }
