@@ -73,19 +73,23 @@ local function addPlayerWeapon(src, xPlayer, weaponName, ammo)
 end
 
 -- ============================================================
---  ox_inventory: Usable Items server-seitig registrieren
+--  Usable Items server-seitig registrieren
 -- ============================================================
-if useOxInventory then
-    AddEventHandler('onServerResourceStart', function(resourceName)
-        if resourceName ~= GetCurrentResourceName() then return end
-        for _, ticket in ipairs(Config.Tickets) do
-            local t = ticket
+AddEventHandler('onServerResourceStart', function(resourceName)
+    if resourceName ~= GetCurrentResourceName() then return end
+    for _, ticket in ipairs(Config.Tickets) do
+        local t = ticket
+        if useOxInventory then
             exports.ox_inventory:RegisterUsableItem(t.itemName, function(source)
                 TriggerClientEvent('mtj_los:client:openTicket', source, t.itemName)
             end)
+        else
+            ESX.RegisterUsableItem(t.itemName, function(source)
+                TriggerClientEvent('mtj_los:client:openTicket', source, t.itemName)
+            end)
         end
-    end)
-end
+    end
+end)
 
 -- ============================================================
 --  Event: Spieler kratzt sein Los auf

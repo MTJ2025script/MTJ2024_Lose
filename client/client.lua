@@ -1,6 +1,5 @@
 local ESX = exports['es_extended']:getSharedObject()
-local isNuiOpen      = false
-local useOxInventory = Config.InventoryType == 'ox_inventory'
+local isNuiOpen = false
 
 -- ============================================================
 --  Hilfsfunktion: Benachrichtigung
@@ -41,30 +40,12 @@ local function openTicketUI(itemName)
 end
 
 -- ============================================================
---  ESX: Alle Los-Items client-seitig registrieren
+--  Ticket-UI oeffnen (wird vom Server ausgeloest)
 -- ============================================================
-if not useOxInventory then
-    AddEventHandler('onClientResourceStart', function(resourceName)
-        if resourceName ~= GetCurrentResourceName() then return end
-
-        for _, ticket in ipairs(Config.Tickets) do
-            local t = ticket
-            ESX.RegisterUsableItem(t.itemName, function()
-                openTicketUI(t.itemName)
-            end)
-        end
-    end)
-end
-
--- ============================================================
---  ox_inventory: Ticket-UI oeffnen (server-seitig ausgeloest)
--- ============================================================
-if useOxInventory then
-    RegisterNetEvent('mtj_los:client:openTicket')
-    AddEventHandler('mtj_los:client:openTicket', function(itemName)
-        openTicketUI(itemName)
-    end)
-end
+RegisterNetEvent('mtj_los:client:openTicket')
+AddEventHandler('mtj_los:client:openTicket', function(itemName)
+    openTicketUI(itemName)
+end)
 
 -- ============================================================
 --  NUI Callback: Spieler kratzt das Los auf
