@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MTJ Los</title>
+    <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<!-- ======================================================
+     HAUPT-WRAPPER (versteckt bis geöffnet)
+     ====================================================== -->
+<div id="mtj-wrapper" class="hidden">
+
+    <!-- ---- TICKET-ANSICHT ---- -->
+    <div id="ticket-view">
+        <div id="ticket-card">
+            <!-- Hintergrundbild des Tickets -->
+            <div id="ticket-bg"></div>
+
+            <!-- Ticket-Inhalt -->
+            <div id="ticket-content">
+                <div id="ticket-logo">🎟️ MTJ LOS</div>
+                <div id="ticket-title"></div>
+
+                <!-- Rubbel-Bereich -->
+                <div id="scratch-area">
+                    <canvas id="scratch-canvas"></canvas>
+                    <div id="scratch-hint">
+                        <span>👆 Zum Aufrubbeln klicken!</span>
+                    </div>
+                </div>
+
+                <div id="ticket-footer">Viel Glück! • MTJ Server</div>
+            </div>
+        </div>
+
+        <button id="btn-close-ticket" onclick="closeUI()">✖ Schließen</button>
+    </div>
+
+    <!-- ---- ERGEBNIS-ANSICHT ---- -->
+    <div id="result-view" class="hidden">
+
+        <!-- GEWINN: Vollbild Geschenk-Animation -->
+        <div id="win-screen" class="hidden">
+            <div id="confetti-container"></div>
+
+            <div id="gift-wrapper">
+                <div id="gift-box">
+                    <div id="gift-lid">
+                        <div id="gift-lid-ribbon"></div>
+                    </div>
+                    <div id="gift-body">
+                        <div id="gift-ribbon-v"></div>
+                        <div id="gift-ribbon-h"></div>
+                    </div>
+                </div>
+
+                <!-- Preis-Bild taucht aus dem Geschenk auf -->
+                <div id="prize-reveal">
+                    <div id="prize-image-wrap">
+                        <img id="prize-image" src="" alt="" />
+                        <div id="prize-emoji">🏆</div>
+                    </div>
+                    <div id="prize-glow"></div>
+                </div>
+            </div>
+
+            <div id="win-text">
+                <div id="win-headline">🎉 GLÜCKWUNSCH! 🎉</div>
+                <div id="win-prize-label"></div>
+            </div>
+
+            <button id="btn-collect" onclick="collectPrize()">✅ Einsammeln</button>
+        </div>
+
+        <!-- NIETE: Verlier-Bildschirm -->
+        <div id="lose-screen" class="hidden">
+            <div id="lose-icon">😢</div>
+            <div id="lose-headline">Leider nichts gewonnen...</div>
+            <div id="lose-subtext"></div>
+            <button id="btn-close-lose" onclick="closeUI()">OK</button>
+        </div>
+
+    </div>
+
+</div>
+
+<script src="js/main.js"></script>
+</body>
+</html>
