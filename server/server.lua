@@ -73,6 +73,12 @@ local function addPlayerWeapon(src, xPlayer, weaponName, ammo)
 end
 
 -- ============================================================
+--  Ausstehende Kratz-Vorgaenge pro Spieler
+--  (Schluessel = source, Wert = itemName)
+-- ============================================================
+local pendingScratches = {}
+
+-- ============================================================
 --  Usable Items server-seitig registrieren
 -- ============================================================
 AddEventHandler('onServerResourceStart', function(resourceName)
@@ -81,10 +87,32 @@ AddEventHandler('onServerResourceStart', function(resourceName)
         local t = ticket
         if useOxInventory then
             exports.ox_inventory:RegisterUsableItem(t.itemName, function(source)
+                -- Verhindere doppeltes Oeffnen
+                if pendingScratches[source] then return end
+
+                local xPlayer = ESX.GetPlayerFromId(source)
+                if not xPlayer then return end
+
+                -- Item sofort entfernen, bevor die UI geöffnet wird
+                if not playerHasItem(source, xPlayer, t.itemName) then return end
+                removePlayerItem(source, xPlayer, t.itemName)
+
+                pendingScratches[source] = t.itemName
                 TriggerClientEvent('mtj_los:client:openTicket', source, t.itemName)
             end)
         else
             ESX.RegisterUsableItem(t.itemName, function(source)
+                -- Verhindere doppeltes Oeffnen
+                if pendingScratches[source] then return end
+
+                local xPlayer = ESX.GetPlayerFromId(source)
+                if not xPlayer then return end
+
+                -- Item sofort entfernen, bevor die UI geöffnet wird
+                if not playerHasItem(source, xPlayer, t.itemName) then return end
+                removePlayerItem(source, xPlayer, t.itemName)
+
+                pendingScratches[source] = t.itemName
                 TriggerClientEvent('mtj_los:client:openTicket', source, t.itemName)
             end)
         end
@@ -101,18 +129,18 @@ AddEventHandler('mtj_los:server:scratch', function(itemName)
 
     if not xPlayer then return end
 
+    -- Sicherstellen, dass der Spieler wirklich ein Los geoeffnet hat
+    if pendingScratches[src] ~= itemName then
+        TriggerClientEvent('mtj_los:client:result', src, { type = 'nothing', label = 'Kein gültiges Los' })
+        return
+    end
+    pendingScratches[src] = nil
+
     local ticketCfg = getTicketConfig(itemName)
     if not ticketCfg then
         TriggerClientEvent('mtj_los:client:result', src, { type = 'nothing', label = 'Ungültiges Los' })
         return
     end
-
-    if not playerHasItem(src, xPlayer, itemName) then
-        TriggerClientEvent('mtj_los:client:result', src, { type = 'nothing', label = 'Du hast kein Los' })
-        return
-    end
-
-    removePlayerItem(src, xPlayer, itemName)
 
     local prize = rollPrize(ticketCfg.prizes)
 

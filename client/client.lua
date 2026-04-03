@@ -69,6 +69,8 @@ end)
 -- ============================================================
 RegisterNetEvent('mtj_los:client:result')
 AddEventHandler('mtj_los:client:result', function(prize)
+    -- Maus-Fokus sicherstellen, damit der Ergebnis-Screen klickbar ist
+    SetNuiFocus(true, true)
     if prize.type == 'nothing' then
         SendNUIMessage({
             action = 'showResult',

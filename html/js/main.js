@@ -188,6 +188,9 @@ function sendScratchEvent() {
    ERGEBNIS ANZEIGEN
    ============================================================ */
 function showResult(data) {
+    // Maus-Events sicherstellen (falls durch den Scratch-Vorgang verlorengegangen)
+    document.body.style.pointerEvents = 'auto';
+
     document.getElementById('ticket-view').classList.add('hidden');
     document.getElementById('result-view').classList.remove('hidden');
 
