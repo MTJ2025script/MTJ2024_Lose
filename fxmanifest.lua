@@ -11,12 +11,12 @@ shared_scripts {
 }
 
 client_scripts {
-    'client/main.lua'
+    'client/client.lua'
 }
 
 server_scripts {
     '@es_extended/imports.lua',
-    'server/main.lua'
+    'server/server.lua'
 }
 
 ui_page 'html/index.html'
