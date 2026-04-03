@@ -177,7 +177,7 @@ function checkScratchProgress() {
 }
 
 function sendScratchEvent() {
-    fetch('https://mtj_los/scratchTicket', {
+    fetch(`https://${window.location.hostname}/scratchTicket`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ itemName: currentItem }),
@@ -283,7 +283,7 @@ function closeUI() {
     document.getElementById('mtj-wrapper').classList.add('hidden');
     // Reset für nächste Nutzung
     resetUI();
-    fetch('https://mtj_los/closeUI', {
+    fetch(`https://${window.location.hostname}/closeUI`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
