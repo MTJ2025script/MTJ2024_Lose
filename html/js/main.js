@@ -11,6 +11,9 @@ let lastProgressCheck  = 0;
 const SCRATCH_THRESHOLD      = 0.55;  // 55% freigerubbelt => automatisch auflösen
 const PROGRESS_CHECK_INTERVAL = 150; // ms zwischen Canvas-Analysen
 
+// Gespeicherte Canvas-Event-Handler (verhindert Listener-Stapelunge)
+let scratchHandlers = null;
+
 /* ============================================================
    FiveM NUI MESSAGE EMPFANGEN
    ============================================================ */
@@ -58,7 +61,22 @@ function openTicket(data) {
 /* ============================================================
    RUBBELFELD (Canvas)
    ============================================================ */
+function removeScratchListeners() {
+    if (!canvas || !scratchHandlers) return;
+    canvas.removeEventListener('mousedown',  scratchHandlers.mousedown);
+    canvas.removeEventListener('mousemove',  scratchHandlers.mousemove);
+    canvas.removeEventListener('mouseup',    scratchHandlers.mouseup);
+    canvas.removeEventListener('mouseleave', scratchHandlers.mouseleave);
+    canvas.removeEventListener('touchstart', scratchHandlers.touchstart);
+    canvas.removeEventListener('touchmove',  scratchHandlers.touchmove);
+    canvas.removeEventListener('touchend',   scratchHandlers.touchend);
+    scratchHandlers = null;
+}
+
 function initScratchCanvas() {
+    // Alte Listener entfernen, bevor neue hinzugefuegt werden
+    removeScratchListeners();
+
     const scratchArea = document.getElementById('scratch-area');
     canvas = document.getElementById('scratch-canvas');
     ctx    = canvas.getContext('2d');
@@ -83,14 +101,24 @@ function initScratchCanvas() {
     ctx.textBaseline = 'middle';
     ctx.fillText('✨ Hier rubbeln! ✨', w / 2, h / 2);
 
-    // Maus- & Touch-Events
-    canvas.addEventListener('mousedown',  startScratch);
-    canvas.addEventListener('mousemove',  doScratch);
-    canvas.addEventListener('mouseup',    stopScratch);
-    canvas.addEventListener('mouseleave', stopScratch);
-    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startScratch(e.touches[0]); }, { passive: false });
-    canvas.addEventListener('touchmove',  (e) => { e.preventDefault(); doScratch(e.touches[0]);  }, { passive: false });
-    canvas.addEventListener('touchend',   stopScratch);
+    // Handler-Referenzen speichern (fuer sauberes Entfernen)
+    scratchHandlers = {
+        mousedown:  startScratch,
+        mousemove:  doScratch,
+        mouseup:    stopScratch,
+        mouseleave: stopScratch,
+        touchstart: (e) => { e.preventDefault(); startScratch(e.touches[0]); },
+        touchmove:  (e) => { e.preventDefault(); doScratch(e.touches[0]);  },
+        touchend:   stopScratch,
+    };
+
+    canvas.addEventListener('mousedown',  scratchHandlers.mousedown);
+    canvas.addEventListener('mousemove',  scratchHandlers.mousemove);
+    canvas.addEventListener('mouseup',    scratchHandlers.mouseup);
+    canvas.addEventListener('mouseleave', scratchHandlers.mouseleave);
+    canvas.addEventListener('touchstart', scratchHandlers.touchstart, { passive: false });
+    canvas.addEventListener('touchmove',  scratchHandlers.touchmove,  { passive: false });
+    canvas.addEventListener('touchend',   scratchHandlers.touchend);
 }
 
 function getCanvasPos(e) {
@@ -263,6 +291,9 @@ function resetUI() {
     isScratching       = false;
     lastProgressCheck  = 0;
     currentItem        = null;
+
+    // Canvas-Listener entfernen
+    removeScratchListeners();
 
     document.getElementById('gift-box').classList.remove('open');
     document.getElementById('prize-reveal').classList.remove('visible');

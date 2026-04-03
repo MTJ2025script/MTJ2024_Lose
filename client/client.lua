@@ -1,5 +1,6 @@
 local ESX = exports['es_extended']:getSharedObject()
-local isNuiOpen = false
+local isNuiOpen      = false
+local useOxInventory = Config.InventoryType == 'ox_inventory'
 
 -- ============================================================
 --  Hilfsfunktion: Benachrichtigung
@@ -10,34 +11,60 @@ local function Notify(msg, ntype)
     elseif Config.NotifyType == 'ox_lib' then
         lib.notify({ title = 'MTJ Los', description = msg, type = ntype or 'inform' })
     else
-        -- Fallback
         ESX.ShowNotification(msg)
     end
 end
 
 -- ============================================================
---  Alle Los-Items registrieren
+--  Hilfsfunktion: Ticket-UI oeffnen
 -- ============================================================
-AddEventHandler('onClientResourceStart', function(resourceName)
-    if resourceName ~= GetCurrentResourceName() then return end
+local function openTicketUI(itemName)
+    if isNuiOpen then return end
 
-    for _, ticket in ipairs(Config.Tickets) do
-        local t = ticket
-        ESX.RegisterUsableItem(t.itemName, function()
-            if isNuiOpen then return end
-            isNuiOpen = true
-
-            -- NUI oeffnen und Ticket-Daten uebergeben
-            SetNuiFocus(true, true)
-            SendNUIMessage({
-                action    = 'openTicket',
-                itemName  = t.itemName,
-                label     = t.label,
-                ticketBg  = t.ticketBg,
-            })
-        end)
+    local ticketCfg
+    for _, t in ipairs(Config.Tickets) do
+        if t.itemName == itemName then
+            ticketCfg = t
+            break
+        end
     end
-end)
+    if not ticketCfg then return end
+
+    isNuiOpen = true
+    SetNuiFocus(true, true)
+    SendNUIMessage({
+        action   = 'openTicket',
+        itemName = ticketCfg.itemName,
+        label    = ticketCfg.label,
+        ticketBg = ticketCfg.ticketBg,
+    })
+end
+
+-- ============================================================
+--  ESX: Alle Los-Items client-seitig registrieren
+-- ============================================================
+if not useOxInventory then
+    AddEventHandler('onClientResourceStart', function(resourceName)
+        if resourceName ~= GetCurrentResourceName() then return end
+
+        for _, ticket in ipairs(Config.Tickets) do
+            local t = ticket
+            ESX.RegisterUsableItem(t.itemName, function()
+                openTicketUI(t.itemName)
+            end)
+        end
+    end)
+end
+
+-- ============================================================
+--  ox_inventory: Ticket-UI oeffnen (server-seitig ausgeloest)
+-- ============================================================
+if useOxInventory then
+    RegisterNetEvent('mtj_los:client:openTicket')
+    AddEventHandler('mtj_los:client:openTicket', function(itemName)
+        openTicketUI(itemName)
+    end)
+end
 
 -- ============================================================
 --  NUI Callback: Spieler kratzt das Los auf
@@ -62,7 +89,6 @@ end)
 RegisterNetEvent('mtj_los:client:result')
 AddEventHandler('mtj_los:client:result', function(prize)
     if prize.type == 'nothing' then
-        -- Niete – Verlier-Anzeige
         SendNUIMessage({
             action = 'showResult',
             win    = false,
@@ -70,7 +96,6 @@ AddEventHandler('mtj_los:client:result', function(prize)
             image  = '',
         })
     else
-        -- Gewinn – Vollbild-Geschenk-Animation
         SendNUIMessage({
             action = 'showResult',
             win    = true,
@@ -89,15 +114,15 @@ AddEventHandler('mtj_los:client:spawnCar', function(model, label)
     RequestModel(modelHash)
     while not HasModelLoaded(modelHash) do Wait(100) end
 
-    local playerPed  = PlayerPedId()
-    local coords     = GetEntityCoords(playerPed)
-    local heading    = GetEntityHeading(playerPed)
+    local playerPed = PlayerPedId()
+    local coords    = GetEntityCoords(playerPed)
+    local heading   = GetEntityHeading(playerPed)
 
-    local spawnX = coords.x + Config.CarSpawnOffset.x
-    local spawnY = coords.y + Config.CarSpawnOffset.y
-    local spawnZ = coords.z + Config.CarSpawnOffset.z
-
-    local vehicle = CreateVehicle(modelHash, spawnX, spawnY, spawnZ, heading, true, false)
+    local vehicle = CreateVehicle(modelHash,
+        coords.x + Config.CarSpawnOffset.x,
+        coords.y + Config.CarSpawnOffset.y,
+        coords.z + Config.CarSpawnOffset.z,
+        heading, true, false)
     SetVehicleOnGroundProperly(vehicle)
     SetEntityAsMissionEntity(vehicle, true, true)
     SetModelAsNoLongerNeeded(modelHash)

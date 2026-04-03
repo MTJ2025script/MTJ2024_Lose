@@ -7,6 +7,9 @@ Config = {}
 -- Benachrichtigungstyp: 'esx' | 'ox_lib' | 'custom'
 Config.NotifyType = 'esx'
 
+-- Inventar-System: 'esx' | 'ox_inventory'
+Config.InventoryType = 'esx'
+
 -- Spawn-Offset fuer gewonnene Fahrzeuge (relativ zum Spieler)
 Config.CarSpawnOffset = { x = 5.0, y = 0.0, z = 0.0 }
 
