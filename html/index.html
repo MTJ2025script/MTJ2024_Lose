@@ -199,5 +199,24 @@
 
 <script src="js/main.js"></script>
 <script src="js/admin.js"></script>
-</body>
+
+<!-- ── DEBUG PANEL (toggle via /losdebug) ── -->
+<div id="debug-panel">
+    <div id="dbg-header">🔧 MTJ Los Debug</div>
+    <div class="dbg-row"><span>Item:</span><span id="dbg-item">—</span></div>
+    <div class="dbg-row"><span>Scratch:</span><span id="dbg-pct">0.0%</span></div>
+    <div class="dbg-row dbg-bar-wrap">
+        <div id="dbg-bar">
+            <div id="dbg-bar-fill"></div>
+            <div id="dbg-bar-threshold"></div>
+        </div>
+    </div>
+    <div class="dbg-row"><span>Schwelle:</span><span id="dbg-threshold">40%</span></div>
+    <div class="dbg-row"><span>scratchDone:</span><span id="dbg-done">✗ NEIN</span></div>
+    <div class="dbg-row"><span>isScratching:</span><span id="dbg-scratching">✗ NEIN</span></div>
+    <div class="dbg-row"><span>resultRcvd:</span><span id="dbg-received">✗ NEIN</span></div>
+    <div id="dbg-sep"></div>
+    <div id="dbg-log"></div>
+    <div id="dbg-hint">/losdebug zum Schliessen · F10 = Notfall-Exit</div>
+</div>
 </html>

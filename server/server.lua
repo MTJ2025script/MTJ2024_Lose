@@ -36,9 +36,14 @@ end
 --  HELFER: Gewichtete Zufalls-Auswahl
 -- ============================================================
 local function rollPrize(prizes)
+    if not prizes or #prizes == 0 then
+        return { type = 'nothing', label = 'Keine Preise konfiguriert', image = '' }
+    end
     local total = 0
     for _, prize in ipairs(prizes) do total = total + (prize.chance or 0) end
-    if total <= 0 then return prizes[#prizes] end
+    if total <= 0 then
+        return prizes[#prizes] or { type = 'nothing', label = 'Keine Preise konfiguriert', image = '' }
+    end
     local roll, cumulative = math.random(1, total), 0
     for _, prize in ipairs(prizes) do
         cumulative = cumulative + (prize.chance or 0)
@@ -249,6 +254,10 @@ AddEventHandler('mtj_los:server:scratch', function(itemName)
     end
 
     local prize = rollPrize(ticketCfg.prizes)
+    if not prize then
+        TriggerClientEvent('mtj_los:client:result', src, { type = 'nothing', label = 'Kein Preis verfügbar' })
+        return
+    end
     local identifier = xPlayer.getIdentifier()
     local playerName = xPlayer.getName()
 

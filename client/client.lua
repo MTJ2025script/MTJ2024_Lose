@@ -6,7 +6,7 @@ local ESX = exports['es_extended']:getSharedObject()
 -- ============================================================
 RegisterNetEvent('mtj_los:client:openTicket')
 AddEventHandler('mtj_los:client:openTicket', function(data)
-    SetNuiFocus(true, true)
+    SetNuiFocus(true, false)   -- Maus-Focus, Tastatur bleibt im Spiel → Key-Bindings bleiben aktiv
     SendNUIMessage({
         action   = 'openTicket',
         itemName = data.itemName or data,
@@ -108,4 +108,21 @@ end)
 RegisterCommand(Config.AdminCommand or 'losadmin', function()
     SetNuiFocus(true, true)
     TriggerServerEvent('mtj_los:admin:open')
+end, false)
+
+-- ============================================================
+--  NOTFALL-EXIT: Kamera-Freeze beheben (/losclose oder F10)
+-- ============================================================
+RegisterCommand('losclose', function()
+    SetNuiFocus(false, false)
+    SendNUIMessage({ action = 'forceClose' })
+end, false)
+
+RegisterKeyMapping('losclose', 'MTJ Los – UI schliessen (Notfall-Exit)', 'keyboard', 'F10')
+
+-- ============================================================
+--  DEBUG TOGGLE (/losdebug)
+-- ============================================================
+RegisterCommand('losdebug', function()
+    SendNUIMessage({ action = 'debug:toggle' })
 end, false)

@@ -8,7 +8,7 @@ let scratchDone       = false;
 let isScratching      = false;
 let canvas, ctx;
 let lastProgressCheck = 0;
-const SCRATCH_THRESHOLD      = 0.48;
+const SCRATCH_THRESHOLD      = 0.40;   // 40 % – einfacher zu erreichen als 48 %
 const PROGRESS_CHECK_INTERVAL = 100;
 let scratchHandlers   = null;
 let ageConfirmed      = false;
@@ -17,6 +17,46 @@ let resultTimeout     = null;
 
 /* ── pending ticket data (wartet auf Age-Gate) ── */
 let pendingTicket     = null;
+
+/* ── Debug ── */
+let debugEnabled = false;
+
+/* ============================================================
+   DEBUG-SYSTEM
+   ============================================================ */
+function debugLog(msg, type) {
+    const t = type || 'info';
+    console.log('[MTJ Los Debug] ' + msg);
+    const panel = document.getElementById('dbg-log');
+    if (!panel) return;
+    const line = document.createElement('div');
+    line.className = 'dbg-line dbg-' + t;
+    const ts = new Date().toLocaleTimeString('de-DE', { hour12: false });
+    line.textContent = '[' + ts + '] ' + msg;
+    panel.prepend(line);
+    while (panel.children.length > 30) panel.removeChild(panel.lastChild);
+}
+
+function updateDebugPanel(pct) {
+    const p = document.getElementById('debug-panel');
+    if (!p) return;
+    p.style.display = debugEnabled ? 'block' : 'none';
+    if (!debugEnabled) return;
+
+    document.getElementById('dbg-item').textContent      = currentItem || '—';
+    document.getElementById('dbg-done').textContent      = scratchDone    ? '✓ JA' : '✗ NEIN';
+    document.getElementById('dbg-scratching').textContent= isScratching   ? '✓ JA' : '✗ NEIN';
+    document.getElementById('dbg-received').textContent  = resultReceived ? '✓ JA' : '✗ NEIN';
+    document.getElementById('dbg-threshold').textContent = (SCRATCH_THRESHOLD * 100).toFixed(0) + '%';
+
+    if (pct !== undefined) {
+        const v = (pct * 100).toFixed(1);
+        document.getElementById('dbg-pct').textContent = v + '%';
+        document.getElementById('dbg-bar-fill').style.width = Math.min(pct * 100, 100) + '%';
+        document.getElementById('dbg-bar-fill').style.background =
+            pct >= SCRATCH_THRESHOLD ? '#00ff00' : '#ffaa00';
+    }
+}
 
 /* ============================================================
    SICHTBARKEIT
@@ -42,10 +82,24 @@ window.addEventListener('message', (event) => {
     const data = event.data;
     if (!data || !data.action) return;
 
-    if (data.action === 'openTicket')  handleOpenTicket(data);
-    if (data.action === 'showResult')  showResult(data);
-    if (data.action === 'admin:open')  openAdmin(data);
+    if (data.action === 'openTicket')    handleOpenTicket(data);
+    if (data.action === 'showResult')    showResult(data);
+    if (data.action === 'admin:open')    openAdmin(data);
+    if (data.action === 'forceClose')    forceClose();
+    if (data.action === 'debug:toggle')  toggleDebug();
 });
+
+function forceClose() {
+    hideAll();
+    resetUI();
+    debugLog('forceClose ausgeführt (Notfall-Exit)', 'warn');
+}
+
+function toggleDebug() {
+    debugEnabled = !debugEnabled;
+    updateDebugPanel();
+    debugLog('Debug-Panel ' + (debugEnabled ? 'aktiviert' : 'deaktiviert'), 'ok');
+}
 
 /* ============================================================
    TICKET ÖFFNEN – erst Age-Gate zeigen
@@ -79,6 +133,8 @@ function openTicket(data) {
     scratchDone    = false;
     resultReceived = false;
     if (resultTimeout) { clearTimeout(resultTimeout); resultTimeout = null; }
+
+    debugLog('Ticket geöffnet: ' + currentItem, 'info');
 
     /* Hintergrund */
     const bg = document.getElementById('ticket-bg-img');
@@ -144,6 +200,8 @@ function initScratchCanvas() {
     canvas.width  = w;
     canvas.height = h;
 
+    debugLog('Canvas init: ' + w + 'x' + h, 'info');
+
     /* Silber-Metallic Schicht */
     const grad = ctx.createLinearGradient(0, 0, w, h);
     grad.addColorStop(0,   '#9a9a9a');
@@ -205,6 +263,8 @@ function initScratchCanvas() {
     canvas.addEventListener('touchstart', scratchHandlers.touchstart, { passive: false });
     canvas.addEventListener('touchmove',  scratchHandlers.touchmove,  { passive: false });
     canvas.addEventListener('touchend',   scratchHandlers.touchend);
+
+    updateDebugPanel(0);
 }
 
 function getCanvasPos(e) {
@@ -248,18 +308,34 @@ function erase(pos) {
     ctx.globalCompositeOperation = 'source-over';
 }
 
-function checkScratchProgress() {
+/* ── Scratch-Prozent berechnen ── */
+function getScratchPercent() {
+    if (!canvas || !ctx || !canvas.width || !canvas.height) return 0;
     const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
     let cleared = 0;
     const total  = canvas.width * canvas.height;
     for (let i = 3; i < imgData.length; i += 4) {
         if (imgData[i] === 0) cleared++;
     }
-    if (cleared / total >= SCRATCH_THRESHOLD) {
+    return cleared / total;
+}
+
+function checkScratchProgress() {
+    /* Null-Guard: Canvas noch nicht bereit */
+    if (!canvas || !ctx || !canvas.width || !canvas.height) {
+        debugLog('checkScratchProgress: Canvas nicht bereit!', 'error');
+        return;
+    }
+
+    const pct = getScratchPercent();
+    updateDebugPanel(pct);
+
+    if (pct >= SCRATCH_THRESHOLD) {
         scratchDone = true;
         removeScratchListeners();
         canvas.style.transition = 'opacity 0.5s ease';
         canvas.style.opacity    = '0';
+        debugLog('Schwelle erreicht (' + (pct * 100).toFixed(1) + '%) → Event wird gesendet', 'ok');
         setTimeout(sendScratchEvent, 250);
     }
 }
@@ -269,8 +345,12 @@ function sendScratchEvent(retries) {
 
     /* Fallback: Kamera-Freeze verhindern wenn Server kein Result schickt */
     if (attempt === 0) {
+        debugLog('scratchTicket gesendet (Item: ' + currentItem + ')', 'info');
         resultTimeout = setTimeout(() => {
-            if (!resultReceived) closeUI();
+            if (!resultReceived) {
+                debugLog('TIMEOUT: Kein Result vom Server – closeUI wird aufgerufen', 'error');
+                closeUI();
+            }
         }, 10000);
     }
 
@@ -278,7 +358,10 @@ function sendScratchEvent(retries) {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ itemName: currentItem }),
+    }).then(() => {
+        debugLog('scratchTicket Fetch OK', 'ok');
     }).catch(() => {
+        debugLog('scratchTicket Fetch FEHLER (Versuch ' + (attempt + 1) + ')', 'error');
         if (attempt < 3) {
             setTimeout(() => sendScratchEvent(attempt + 1), 500);
         }
@@ -293,6 +376,8 @@ function showResult(data) {
     if (resultTimeout) { clearTimeout(resultTimeout); resultTimeout = null; }
     hideAll();
     document.body.style.pointerEvents = 'auto';
+
+    debugLog('Result empfangen: win=' + data.win + ' label=' + data.label, 'ok');
 
     if (data.win) {
         showWin(data);
@@ -364,6 +449,15 @@ function closeUI() {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({}),
+    }).catch(() => {
+        /* Retry – Focus MUSS freigegeben werden */
+        setTimeout(() => {
+            fetch(`https://${window.location.hostname}/closeUI`, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({}),
+            }).catch(() => {});
+        }, 500);
     });
 }
 
@@ -394,5 +488,8 @@ function resetUI() {
 
     document.body.style.display       = 'none';
     document.body.style.pointerEvents = 'none';
+
+    updateDebugPanel(0);
+    debugLog('UI zurückgesetzt', 'info');
 }
 
