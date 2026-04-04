@@ -20,7 +20,6 @@ client_scripts {
 }
 
 server_scripts {
-    '@oxmysql/lib/MySQL.lua',
     '@es_extended/imports.lua',
     'server/server.lua'
 }

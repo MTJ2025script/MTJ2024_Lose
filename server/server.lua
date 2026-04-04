@@ -115,7 +115,7 @@ end
 --  DB: LIVE CONFIG LADEN
 -- ============================================================
 local function loadLiveConfig(callback)
-    MySQL.query([[
+    exports['oxmysql']:query([[
         SELECT
             t.id AS ticket_id, t.item_name AS ticket_item, t.label AS ticket_label,
             t.ticket_bg, t.shop_price,
@@ -178,13 +178,13 @@ local function seedFromConfig(callback)
 
     local done = 0
     for _, ticket in ipairs(Config.Tickets) do
-        MySQL.insert(
+        exports['oxmysql']:insert(
             'INSERT IGNORE INTO mtj_los_tickets (item_name, label, ticket_bg, shop_price) VALUES (?, ?, ?, ?)',
             { ticket.itemName, ticket.label, ticket.ticketBg or '', ticket.shopPrice or 500 },
             function(ticketId)
                 if ticketId and ticketId > 0 then
                     for _, prize in ipairs(ticket.prizes or {}) do
-                        MySQL.insert(
+                        exports['oxmysql']:insert(
                             'INSERT INTO mtj_los_prizes (ticket_id, type, label, image, chance, amount, item_name, weapon, ammo, car_model) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                             { ticketId, prize.type, prize.label, prize.image or '',
                               prize.chance or 10, prize.amount or 0,
@@ -206,7 +206,7 @@ end
 AddEventHandler('onServerResourceStart', function(resourceName)
     if resourceName ~= GetCurrentResourceName() then return end
 
-    MySQL.query('SELECT COUNT(*) as cnt FROM mtj_los_tickets', {}, function(res)
+    exports['oxmysql']:query('SELECT COUNT(*) as cnt FROM mtj_los_tickets', {}, function(res)
         local cnt = (res and res[1] and res[1].cnt) or 0
         if cnt == 0 then
             seedFromConfig(function()
@@ -263,7 +263,7 @@ AddEventHandler('mtj_los:server:scratch', function(itemName)
     end
 
     -- Verlauf speichern
-    MySQL.insert(
+    exports['oxmysql']:insert(
         'INSERT INTO mtj_los_history (player_identifier, player_name, ticket_item, prize_type, prize_label) VALUES (?, ?, ?, ?, ?)',
         { identifier, playerName, itemName, prize.type, prize.label },
         function() end
@@ -319,7 +319,7 @@ AddEventHandler('mtj_los:admin:saveTicket', function(data)
     if not isAdmin(src) then return end
 
     if data.id then
-        MySQL.update(
+        exports['oxmysql']:execute(
             'UPDATE mtj_los_tickets SET label=?, ticket_bg=?, shop_price=? WHERE id=?',
             { data.label, data.ticketBg or '', data.shopPrice or 500, data.id },
             function()
@@ -334,12 +334,12 @@ AddEventHandler('mtj_los:admin:saveTicket', function(data)
             end
         )
     else
-        MySQL.insert(
+        exports['oxmysql']:insert(
             'INSERT INTO mtj_los_tickets (item_name, label, ticket_bg, shop_price) VALUES (?, ?, ?, ?)',
             { data.itemName, data.label, data.ticketBg or '', data.shopPrice or 500 },
             function(newId)
                 -- Item auch in ESX items eintragen
-                MySQL.insert(
+                exports['oxmysql']:insert(
                     'INSERT IGNORE INTO items (name, label, weight, rare, can_remove) VALUES (?, ?, 1, 0, 1)',
                     { data.itemName, data.label },
                     function() end
@@ -364,7 +364,7 @@ RegisterNetEvent('mtj_los:admin:deleteTicket')
 AddEventHandler('mtj_los:admin:deleteTicket', function(data)
     local src = source
     if not isAdmin(src) then return end
-    MySQL.update('DELETE FROM mtj_los_tickets WHERE id=?', { data.id }, function()
+    exports['oxmysql']:execute('DELETE FROM mtj_los_tickets WHERE id=?', { data.id }, function()
         loadLiveConfig(function()
             TriggerClientEvent('mtj_los:admin:sendData', src, {
                 action  = 'admin:ticketsUpdated',
@@ -384,7 +384,7 @@ AddEventHandler('mtj_los:admin:savePrize', function(data)
     if not isAdmin(src) then return end
 
     if data.id then
-        MySQL.update([[
+        exports['oxmysql']:execute([[
             UPDATE mtj_los_prizes
             SET type=?, label=?, image=?, chance=?, amount=?, item_name=?, weapon=?, ammo=?, car_model=?
             WHERE id=?]],
@@ -402,7 +402,7 @@ AddEventHandler('mtj_los:admin:savePrize', function(data)
             end
         )
     else
-        MySQL.insert([[
+        exports['oxmysql']:insert([[
             INSERT INTO mtj_los_prizes (ticket_id, type, label, image, chance, amount, item_name, weapon, ammo, car_model)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]],
             { data.ticketId, data.type, data.label, data.image or '', data.chance or 10,
@@ -427,7 +427,7 @@ RegisterNetEvent('mtj_los:admin:deletePrize')
 AddEventHandler('mtj_los:admin:deletePrize', function(data)
     local src = source
     if not isAdmin(src) then return end
-    MySQL.update('DELETE FROM mtj_los_prizes WHERE id=?', { data.id }, function()
+    exports['oxmysql']:execute('DELETE FROM mtj_los_prizes WHERE id=?', { data.id }, function()
         loadLiveConfig(function()
             TriggerClientEvent('mtj_los:admin:sendData', src, {
                 action  = 'admin:ticketsUpdated',
@@ -495,7 +495,7 @@ RegisterNetEvent('mtj_los:admin:getEsxItems')
 AddEventHandler('mtj_los:admin:getEsxItems', function()
     local src = source
     if not isAdmin(src) then return end
-    MySQL.query("SELECT name, label, weight, rare FROM items WHERE name LIKE 'mtj_%' ORDER BY name", {}, function(rows)
+    exports['oxmysql']:query("SELECT name, label, weight, rare FROM items WHERE name LIKE 'mtj_%' ORDER BY name", {}, function(rows)
         TriggerClientEvent('mtj_los:admin:sendData', src, {
             action = 'admin:esxItemsUpdated',
             items  = rows or {},
@@ -510,11 +510,11 @@ RegisterNetEvent('mtj_los:admin:addEsxItem')
 AddEventHandler('mtj_los:admin:addEsxItem', function(data)
     local src = source
     if not isAdmin(src) then return end
-    MySQL.insert(
+    exports['oxmysql']:insert(
         'INSERT IGNORE INTO items (name, label, weight, rare, can_remove) VALUES (?, ?, ?, ?, 1)',
         { data.name, data.label, data.weight or 1, data.rare or 0 },
         function()
-            MySQL.query("SELECT name, label, weight, rare FROM items WHERE name LIKE 'mtj_%' ORDER BY name", {}, function(rows)
+            exports['oxmysql']:query("SELECT name, label, weight, rare FROM items WHERE name LIKE 'mtj_%' ORDER BY name", {}, function(rows)
                 TriggerClientEvent('mtj_los:admin:sendData', src, {
                     action = 'admin:esxItemsUpdated',
                     items  = rows or {},
@@ -533,13 +533,13 @@ AddEventHandler('mtj_los:admin:getStats', function()
     local src = source
     if not isAdmin(src) then return end
 
-    MySQL.query('SELECT COUNT(*) as total FROM mtj_los_history', {}, function(resTotal)
+    exports['oxmysql']:query('SELECT COUNT(*) as total FROM mtj_los_history', {}, function(resTotal)
         local total = (resTotal and resTotal[1] and resTotal[1].total) or 0
-        MySQL.query("SELECT COUNT(*) as wins FROM mtj_los_history WHERE prize_type != 'nothing'", {}, function(resWins)
+        exports['oxmysql']:query("SELECT COUNT(*) as wins FROM mtj_los_history WHERE prize_type != 'nothing'", {}, function(resWins)
             local wins   = (resWins and resWins[1] and resWins[1].wins) or 0
             local losses = total - wins
             local winRate = total > 0 and math.floor(wins / total * 100) or 0
-            MySQL.query([[
+            exports['oxmysql']:query([[
                 SELECT player_name AS playerName, ticket_item AS ticketItem,
                        prize_type AS prizeType, prize_label AS prizeLabel,
                        scratched_at AS scratchedAt
@@ -567,7 +567,7 @@ RegisterNetEvent('mtj_los:admin:clearHistory')
 AddEventHandler('mtj_los:admin:clearHistory', function()
     local src = source
     if not isAdmin(src) then return end
-    MySQL.update('DELETE FROM mtj_los_history', {}, function()
+    exports['oxmysql']:execute('DELETE FROM mtj_los_history', {}, function()
         TriggerClientEvent('mtj_los:admin:sendData', src, {
             action = 'admin:statsUpdated',
             stats  = { totalScratched=0, totalWins=0, totalLosses=0, winRate=0, history={} },
