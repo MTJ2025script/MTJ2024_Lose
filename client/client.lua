@@ -1,114 +1,111 @@
 local ESX = exports['es_extended']:getSharedObject()
-local isNuiOpen = false
 
 -- ============================================================
---  Hilfsfunktion: Benachrichtigung
+--  TICKET ÖFFNEN
+--  Server sendet table { itemName, label, ticketBg }
 -- ============================================================
-local function Notify(msg, ntype)
-    if Config.NotifyType == 'esx' then
-        ESX.ShowNotification(msg)
-    elseif Config.NotifyType == 'ox_lib' then
-        lib.notify({ title = 'MTJ Los', description = msg, type = ntype or 'inform' })
-    else
-        ESX.ShowNotification(msg)
-    end
-end
-
--- ============================================================
---  Hilfsfunktion: Ticket-UI oeffnen
--- ============================================================
-local function openTicketUI(itemName)
-    if isNuiOpen then return end
-
-    local ticketCfg
-    for _, t in ipairs(Config.Tickets) do
-        if t.itemName == itemName then
-            ticketCfg = t
-            break
-        end
-    end
-    if not ticketCfg then return end
-
-    isNuiOpen = true
+RegisterNetEvent('mtj_los:client:openTicket')
+AddEventHandler('mtj_los:client:openTicket', function(data)
     SetNuiFocus(true, true)
     SendNUIMessage({
         action   = 'openTicket',
-        itemName = ticketCfg.itemName,
-        label    = ticketCfg.label,
-        ticketBg = ticketCfg.ticketBg,
+        itemName = data.itemName or data,
+        label    = data.label    or '',
+        ticketBg = data.ticketBg or '',
     })
-end
-
--- ============================================================
---  Ticket-UI oeffnen (wird vom Server ausgeloest)
--- ============================================================
-RegisterNetEvent('mtj_los:client:openTicket')
-AddEventHandler('mtj_los:client:openTicket', function(itemName)
-    openTicketUI(itemName)
 end)
 
 -- ============================================================
---  NUI Callback: Spieler kratzt das Los auf
--- ============================================================
-RegisterNUICallback('scratchTicket', function(data, cb)
-    TriggerServerEvent('mtj_los:server:scratch', data.itemName)
-    cb('ok')
-end)
-
--- ============================================================
---  NUI Callback: UI schliessen (nach Gewinn/Verlust)
--- ============================================================
-RegisterNUICallback('closeUI', function(_, cb)
-    SetNuiFocus(false, false)
-    isNuiOpen = false
-    cb('ok')
-end)
-
--- ============================================================
---  Server -> Client: Ergebnis erhalten
+--  ERGEBNIS ANZEIGEN
 -- ============================================================
 RegisterNetEvent('mtj_los:client:result')
 AddEventHandler('mtj_los:client:result', function(prize)
-    -- Maus-Fokus sicherstellen, damit der Ergebnis-Screen klickbar ist
-    SetNuiFocus(true, true)
-    if prize.type == 'nothing' then
-        SendNUIMessage({
-            action = 'showResult',
-            win    = false,
-            label  = prize.label,
-            image  = '',
-        })
-    else
-        SendNUIMessage({
-            action = 'showResult',
-            win    = true,
-            label  = prize.label,
-            image  = prize.image or '',
-        })
-    end
+    SendNUIMessage({
+        action = 'showResult',
+        win    = prize.type ~= 'nothing',
+        label  = prize.label or '',
+        image  = prize.image or '',
+    })
 end)
 
 -- ============================================================
---  Server -> Client: Fahrzeug spawnen (Gewinn: Auto)
+--  FAHRZEUG SPAWNEN
 -- ============================================================
 RegisterNetEvent('mtj_los:client:spawnCar')
 AddEventHandler('mtj_los:client:spawnCar', function(model, label)
     local modelHash = GetHashKey(model)
     RequestModel(modelHash)
-    while not HasModelLoaded(modelHash) do Wait(100) end
-
-    local playerPed = PlayerPedId()
-    local coords    = GetEntityCoords(playerPed)
-    local heading   = GetEntityHeading(playerPed)
-
-    local vehicle = CreateVehicle(modelHash,
-        coords.x + Config.CarSpawnOffset.x,
-        coords.y + Config.CarSpawnOffset.y,
-        coords.z + Config.CarSpawnOffset.z,
-        heading, true, false)
-    SetVehicleOnGroundProperly(vehicle)
-    SetEntityAsMissionEntity(vehicle, true, true)
+    local timeout = 0
+    while not HasModelLoaded(modelHash) and timeout < 50 do
+        Citizen.Wait(100)
+        timeout = timeout + 1
+    end
+    if not HasModelLoaded(modelHash) then
+        ESX.ShowNotification('[MTJ Los] Fahrzeug-Modell nicht geladen.')
+        return
+    end
+    local ped    = PlayerPedId()
+    local coords = GetEntityCoords(ped)
+    local offset = Config.CarSpawnOffset or { x = 5.0, y = 0.0, z = 0.0 }
+    local veh    = CreateVehicle(modelHash,
+        coords.x + offset.x, coords.y + offset.y, coords.z + (offset.z or 0.5),
+        GetEntityHeading(ped), true, false)
     SetModelAsNoLongerNeeded(modelHash)
-
-    Notify('🚗 Dein Gewinn-Fahrzeug wurde gespawnt: ' .. label, 'success')
+    if veh and veh ~= 0 then
+        SetVehicleNumberPlateText(veh, 'MTJ LOS')
+        SetEntityAsMissionEntity(veh, true, true)
+        ESX.ShowNotification(('🚗 %s gespawnt!'):format(label or model))
+    end
 end)
+
+-- ============================================================
+--  SERVER → CLIENT: Admin-Daten → NUI
+-- ============================================================
+RegisterNetEvent('mtj_los:admin:sendData')
+AddEventHandler('mtj_los:admin:sendData', function(payload)
+    SendNUIMessage(payload)
+end)
+
+-- ============================================================
+--  NUI CALLBACKS – Spieler
+-- ============================================================
+RegisterNUICallback('scratchTicket', function(data, cb)
+    TriggerServerEvent('mtj_los:server:scratch', data.itemName)
+    cb({ ok = true })
+end)
+
+RegisterNUICallback('closeUI', function(_, cb)
+    SetNuiFocus(false, false)
+    cb({ ok = true })
+end)
+
+-- ============================================================
+--  NUI CALLBACKS – Admin
+-- ============================================================
+local adminCbs = {
+    'admin:open', 'admin:saveTicket', 'admin:deleteTicket',
+    'admin:savePrize', 'admin:deletePrize', 'admin:getPlayers',
+    'admin:giveItem', 'admin:getEsxItems', 'admin:addEsxItem',
+    'admin:getStats', 'admin:clearHistory',
+}
+
+for _, cbName in ipairs(adminCbs) do
+    local evtName = 'mtj_los:' .. cbName
+    RegisterNUICallback(cbName, function(data, cb)
+        TriggerServerEvent(evtName, data)
+        cb({ ok = true })
+    end)
+end
+
+RegisterNUICallback('admin:close', function(_, cb)
+    SetNuiFocus(false, false)
+    cb({ ok = true })
+end)
+
+-- ============================================================
+--  ADMIN BEFEHL (/losadmin)
+-- ============================================================
+RegisterCommand(Config.AdminCommand or 'losadmin', function()
+    SetNuiFocus(true, true)
+    TriggerServerEvent('mtj_los:admin:open')
+end, false)
