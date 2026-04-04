@@ -8,79 +8,76 @@
 }
 
 body {
-    font-family: 'Segoe UI', Arial, sans-serif;
+    font-family: 'Segoe UI', system-ui, Arial, sans-serif;
     background: transparent;
     overflow: hidden;
     user-select: none;
-    pointer-events: none;
-    /* NUI-Frame komplett unsichtbar wenn UI geschlossen – einziger zuverlässiger Fix für FiveM CEF */
+    /* NUI-Frame komplett unsichtbar wenn UI geschlossen */
     display: none;
-}
-
-.hidden {
-    display: none !important;
+    pointer-events: none;
 }
 
 /* ============================================================
-   HAUPT-WRAPPER
+   ROOT APP WRAPPER
    ============================================================ */
-#mtj-wrapper {
+#app {
     position: fixed;
     inset: 0;
-    display: flex;
+    display: none;          /* JS setzt display:flex */
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.75);
-    backdrop-filter: blur(6px);
+    background: rgba(0, 0, 0, 0.88);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     z-index: 9999;
-    animation: fadeIn 0.3s ease;
-    /* Mauseingaben erlauben, sobald der Wrapper sichtbar ist */
     pointer-events: auto;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to   { opacity: 1; }
+/* ── Screens (alle per JS gesteuert) ── */
+#screen-ticket,
+#screen-win,
+#screen-lose {
+    display: none;          /* JS setzt display:flex */
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
 }
 
 /* ============================================================
-   TICKET-ANSICHT
+   TICKET CARD
    ============================================================ */
-#ticket-view {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-    animation: slideUp 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-@keyframes slideUp {
-    from { transform: translateY(60px); opacity: 0; }
-    to   { transform: translateY(0);    opacity: 1; }
-}
-
 #ticket-card {
     position: relative;
-    width: 520px;
-    height: 310px;
-    border-radius: 18px;
+    width: 500px;
+    height: 290px;
+    border-radius: 20px;
     overflow: hidden;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 0 2px rgba(255,255,255,0.15);
+    /* Gold border glow */
+    box-shadow:
+        0 0 0 1px rgba(255, 200, 60, 0.35),
+        0 0 30px rgba(255, 190, 30, 0.18),
+        0 24px 60px rgba(0, 0, 0, 0.75);
+    animation: cardDrop 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-/* Hintergrundbild des Tickets */
-#ticket-bg {
+@keyframes cardDrop {
+    from { transform: translateY(-40px) scale(0.95); opacity: 0; }
+    to   { transform: translateY(0)     scale(1);    opacity: 1; }
+}
+
+/* Hintergrundbild-Ebene */
+#ticket-bg-img {
     position: absolute;
     inset: 0;
     background-size: cover;
     background-position: center;
-    background-repeat: no-repeat;
-    /* Fallback-Gradient wenn kein Bild */
-    background-color: #1a1a2e;
+    background-color: #0d0d1a;
 }
 
-/* Semi-transparente Overlay-Schicht */
-#ticket-content {
+/* Dunkler Overlay über dem Hintergrund */
+#ticket-inner {
     position: relative;
     z-index: 2;
     height: 100%;
@@ -88,125 +85,145 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: space-between;
-    padding: 18px 24px;
+    padding: 20px 28px 16px;
     background: linear-gradient(
         180deg,
-        rgba(0,0,0,0.45) 0%,
-        rgba(0,0,0,0.15) 40%,
-        rgba(0,0,0,0.55) 100%
+        rgba(0, 0, 0, 0.55) 0%,
+        rgba(0, 0, 0, 0.20) 45%,
+        rgba(0, 0, 0, 0.65) 100%
     );
 }
 
-#ticket-logo {
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 4px;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.7);
-    text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+/* ── Header ── */
+#ticket-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
-#ticket-title {
-    font-size: 26px;
+#ticket-logo-mark {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    color: rgba(255, 210, 70, 0.75);
+    text-shadow: 0 0 12px rgba(255,200,50,0.4);
+}
+
+#ticket-name-label {
+    font-size: 18px;
     font-weight: 900;
     color: #fff;
-    text-shadow: 0 2px 12px rgba(0,0,0,0.9), 0 0 30px rgba(255,210,50,0.5);
+    text-shadow: 0 2px 12px rgba(0,0,0,0.9), 0 0 24px rgba(255,210,50,0.4);
     letter-spacing: 1px;
 }
 
-/* Rubbel-Bereich */
-#scratch-area {
+/* ── Scratch Zone ── */
+#scratch-zone {
     position: relative;
-    width: 300px;
-    height: 90px;
-    border-radius: 10px;
+    width: 360px;
+    height: 100px;
+    border-radius: 12px;
     overflow: hidden;
     cursor: crosshair;
+    /* Goldener Rahmen */
+    box-shadow:
+        0 0 0 1.5px rgba(255,200,60,0.5),
+        0 4px 20px rgba(0,0,0,0.5);
 }
 
+/* Dekoratives Muster unter dem Canvas */
+#scratch-under {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: linear-gradient(135deg, #1a1a00, #2a2200, #1a1a00);
+    padding: 8px;
+}
+
+.scratch-stars {
+    font-size: 14px;
+    color: rgba(255, 200, 50, 0.5);
+    letter-spacing: 6px;
+}
+
+.scratch-cta-text {
+    font-size: 15px;
+    font-weight: 700;
+    color: rgba(255, 200, 50, 0.8);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+/* Rubbelschicht */
 #scratch-canvas {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
-    border-radius: 10px;
-    z-index: 3;
+    border-radius: 12px;
     cursor: crosshair;
+    /* Verhindert Glitch bei touch-events */
+    touch-action: none;
 }
 
-#scratch-hint {
-    position: absolute;
-    inset: 0;
+/* ── Hinweistext ── */
+#ticket-hint {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.45);
+    letter-spacing: 0.5px;
+}
+
+/* ── Footer-Zeile ── */
+#ticket-footer-row {
+    width: 100%;
     display: flex;
     align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #c9a84c, #f5d060, #c9a84c);
-    border-radius: 10px;
-    z-index: 2;
+    justify-content: space-between;
 }
 
-#scratch-hint span {
-    font-size: 16px;
-    font-weight: 700;
-    color: #3d2a00;
-    letter-spacing: 0.5px;
-    text-shadow: 0 1px 2px rgba(255,255,255,0.3);
-}
-
-#ticket-footer {
-    font-size: 11px;
-    color: rgba(255,255,255,0.5);
-    letter-spacing: 2px;
+#ticket-footer-text {
+    font-size: 10px;
+    color: rgba(255,255,255,0.35);
+    letter-spacing: 2.5px;
     text-transform: uppercase;
 }
 
-/* Schließen-Button (Ticket) */
 #btn-close-ticket {
-    padding: 10px 28px;
-    background: rgba(255,255,255,0.12);
-    color: rgba(255,255,255,0.7);
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 8px;
-    font-size: 14px;
+    width: 30px;
+    height: 30px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 50%;
+    color: rgba(255,255,255,0.6);
+    font-size: 13px;
     cursor: pointer;
-    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, color 0.2s;
+    line-height: 1;
 }
+
 #btn-close-ticket:hover {
-    background: rgba(255,255,255,0.22);
+    background: rgba(255,80,80,0.3);
+    border-color: rgba(255,80,80,0.5);
     color: #fff;
 }
 
 /* ============================================================
-   ERGEBNIS-ANSICHT
+   WIN SCREEN
    ============================================================ */
-#result-view {
-    position: fixed;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0,0,0,0.85);
-    backdrop-filter: blur(8px);
-    z-index: 10000;
-    animation: fadeIn 0.4s ease;
-}
-
-/* ============================================================
-   GEWINN-SCREEN
-   ============================================================ */
-#win-screen {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 30px;
-    width: 100%;
-    height: 100%;
+#screen-win {
     position: relative;
 }
 
-/* ---- Konfetti ---- */
-#confetti-container {
+#confetti-root {
     position: fixed;
     inset: 0;
     pointer-events: none;
@@ -216,118 +233,56 @@ body {
 
 .confetti-piece {
     position: absolute;
-    top: -20px;
-    width: 10px;
-    height: 14px;
+    top: -24px;
     opacity: 0.9;
     animation: confettiFall linear forwards;
 }
 
 @keyframes confettiFall {
-    0%   { transform: translateY(0) rotate(0deg);   opacity: 1; }
-    100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+    0%   { transform: translateY(0) rotate(0deg);     opacity: 1; }
+    85%  { opacity: 1; }
+    100% { transform: translateY(105vh) rotate(540deg); opacity: 0; }
 }
 
-/* ---- Geschenk-Box ---- */
-#gift-wrapper {
+/* Win panel */
+#win-panel {
     position: relative;
     z-index: 2;
     display: flex;
     flex-direction: column;
     align-items: center;
+    gap: 22px;
+    animation: winPanelIn 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-#gift-box {
+@keyframes winPanelIn {
+    from { transform: scale(0.7); opacity: 0; }
+    to   { transform: scale(1);   opacity: 1; }
+}
+
+/* Gold glow ring behind prize */
+#win-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 280px;
+    height: 280px;
+    background: radial-gradient(circle, rgba(255,210,30,0.28) 0%, transparent 68%);
+    animation: glowPulse 2s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 0;
+}
+
+@keyframes glowPulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(1);    opacity: 0.7; }
+    50%       { transform: translate(-50%, -50%) scale(1.18); opacity: 1;   }
+}
+
+/* Prize image / icon */
+#prize-visual {
     position: relative;
-    width: 160px;
-    height: 140px;
-}
-
-/* Geschenk-Deckel */
-#gift-lid {
-    position: absolute;
-    top: 0;
-    left: -8px;
-    width: 176px;
-    height: 44px;
-    background: linear-gradient(135deg, #e63946, #c1121f);
-    border-radius: 8px 8px 0 0;
-    box-shadow: 0 -4px 20px rgba(230,57,70,0.5);
-    transform-origin: center top;
-    transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1),
-                opacity 0.5s ease;
-    z-index: 4;
-}
-
-#gift-lid-ribbon {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 28px;
-    height: 44px;
-    background: linear-gradient(135deg, #ffd60a, #ffc300);
-    border-radius: 4px;
-}
-
-/* Oeffne-Animation: Deckel fliegt hoch */
-#gift-box.open #gift-lid {
-    transform: translateY(-120px) rotate(-25deg);
-    opacity: 0;
-}
-
-/* Geschenk-Körper */
-#gift-body {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 160px;
-    height: 110px;
-    background: linear-gradient(135deg, #e63946, #c1121f);
-    border-radius: 0 0 12px 12px;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
-    overflow: hidden;
-}
-
-#gift-ribbon-v {
-    position: absolute;
-    top: 0; bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 26px;
-    background: linear-gradient(135deg, #ffd60a, #ffc300);
-}
-
-#gift-ribbon-h {
-    position: absolute;
-    top: 30px;
-    left: 0; right: 0;
-    height: 26px;
-    background: linear-gradient(135deg, #ffd60a, #ffc300);
-}
-
-/* ---- Preis-Enthüllung ---- */
-#prize-reveal {
-    position: absolute;
-    bottom: 60px;
-    left: 50%;
-    transform: translateX(-50%) translateY(40px);
-    opacity: 0;
-    transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.5s,
-                opacity 0.6s ease 0.5s;
-    z-index: 5;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-#prize-reveal.visible {
-    transform: translateX(-50%) translateY(-120px);
-    opacity: 1;
-}
-
-#prize-image-wrap {
-    position: relative;
+    z-index: 1;
     width: 140px;
     height: 140px;
     display: flex;
@@ -335,156 +290,133 @@ body {
     justify-content: center;
 }
 
-#prize-image {
+#prize-img {
     max-width: 120px;
     max-height: 120px;
     object-fit: contain;
-    filter: drop-shadow(0 0 20px rgba(255,215,0,0.9));
-    border-radius: 12px;
+    filter: drop-shadow(0 0 22px rgba(255,215,0,0.9));
+    border-radius: 14px;
+    display: none;
 }
 
-#prize-emoji {
-    font-size: 80px;
-    filter: drop-shadow(0 0 20px rgba(255,215,0,0.8));
+#prize-icon-fallback {
+    font-size: 90px;
+    filter: drop-shadow(0 0 20px rgba(255,210,30,0.7));
+    line-height: 1;
 }
 
-#prize-glow {
-    position: absolute;
-    inset: -20px;
-    background: radial-gradient(circle, rgba(255,215,0,0.4) 0%, transparent 70%);
-    animation: pulse 1.5s ease-in-out infinite;
-    pointer-events: none;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 0.6; transform: scale(1);    }
-    50%       { opacity: 1;   transform: scale(1.15); }
-}
-
-/* ---- Gewinn-Text ---- */
-#win-text {
-    position: relative;
-    z-index: 2;
-    text-align: center;
-    opacity: 0;
-    transform: translateY(20px);
-    transition: opacity 0.6s ease 1.1s, transform 0.6s ease 1.1s;
-}
-
-#win-text.visible {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-#win-headline {
-    font-size: 42px;
+/* Win badge */
+#win-badge {
+    font-size: 34px;
     font-weight: 900;
     color: #ffd60a;
     text-shadow:
-        0 0 20px rgba(255,214,10,0.8),
-        0 4px 20px rgba(0,0,0,0.9);
+        0 0 24px rgba(255,214,10,0.8),
+        0 3px 16px rgba(0,0,0,0.9);
     letter-spacing: 2px;
-    animation: winPop 0.5s cubic-bezier(0.22, 1, 0.36, 1) 1.1s both;
+    text-align: center;
 }
 
-@keyframes winPop {
-    from { transform: scale(0.5); opacity: 0; }
-    to   { transform: scale(1);   opacity: 1; }
-}
-
+/* Prize label */
 #win-prize-label {
-    margin-top: 10px;
     font-size: 22px;
     font-weight: 700;
     color: #fff;
     text-shadow: 0 2px 10px rgba(0,0,0,0.8);
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
+    text-align: center;
 }
 
-/* Einsammeln-Button */
+/* Collect button */
 #btn-collect {
-    position: relative;
-    z-index: 2;
-    padding: 14px 44px;
-    background: linear-gradient(135deg, #38b000, #70e000);
+    padding: 14px 52px;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
     color: #fff;
     border: none;
-    border-radius: 12px;
+    border-radius: 14px;
     font-size: 18px;
-    font-weight: 700;
+    font-weight: 800;
     cursor: pointer;
-    box-shadow: 0 6px 24px rgba(56,176,0,0.5);
-    opacity: 0;
-    transform: translateY(20px);
-    transition: opacity 0.5s ease 1.5s, transform 0.5s ease 1.5s,
-                background 0.2s, box-shadow 0.2s;
     letter-spacing: 0.5px;
-}
-
-#btn-collect.visible {
-    opacity: 1;
-    transform: translateY(0);
+    box-shadow: 0 6px 28px rgba(34,197,94,0.5);
+    transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
 }
 
 #btn-collect:hover {
-    background: linear-gradient(135deg, #2d9200, #5cc000);
-    box-shadow: 0 8px 32px rgba(56,176,0,0.7);
+    background: linear-gradient(135deg, #16a34a, #166534);
+    box-shadow: 0 8px 36px rgba(34,197,94,0.7);
     transform: translateY(-2px);
+}
+
+#btn-collect:active {
+    transform: translateY(0);
 }
 
 /* ============================================================
-   NIETE-SCREEN
+   LOSE SCREEN
    ============================================================ */
-#lose-screen {
+#lose-panel {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 20px;
+    gap: 18px;
     text-align: center;
-    animation: slideUp 0.4s ease;
+    animation: loseIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-#lose-icon {
-    font-size: 90px;
-    animation: shake 0.6s ease 0.2s both;
+@keyframes loseIn {
+    from { transform: translateY(30px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
 }
 
-@keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    20%       { transform: translateX(-12px); }
-    40%       { transform: translateX(12px); }
-    60%       { transform: translateX(-8px); }
-    80%       { transform: translateX(8px); }
+#lose-emoji {
+    font-size: 88px;
+    animation: loseShake 0.6s ease 0.2s both;
+    line-height: 1;
+}
+
+@keyframes loseShake {
+    0%, 100% { transform: rotate(0deg); }
+    20%       { transform: rotate(-10deg); }
+    40%       { transform: rotate(10deg); }
+    60%       { transform: rotate(-7deg); }
+    80%       { transform: rotate(7deg); }
 }
 
 #lose-headline {
-    font-size: 32px;
+    font-size: 30px;
     font-weight: 800;
-    color: #ff6b6b;
-    text-shadow: 0 2px 12px rgba(0,0,0,0.8);
+    color: #f87171;
+    text-shadow: 0 2px 14px rgba(0,0,0,0.8);
 }
 
 #lose-subtext {
-    font-size: 16px;
-    color: rgba(255,255,255,0.6);
+    font-size: 15px;
+    color: rgba(255,255,255,0.55);
+    max-width: 320px;
 }
 
-#btn-close-lose {
-    margin-top: 10px;
-    padding: 12px 40px;
-    background: linear-gradient(135deg, #e63946, #c1121f);
+#btn-lose-ok {
+    margin-top: 6px;
+    padding: 12px 42px;
+    background: linear-gradient(135deg, #ef4444, #b91c1c);
     color: #fff;
     border: none;
-    border-radius: 10px;
+    border-radius: 12px;
     font-size: 16px;
     font-weight: 700;
     cursor: pointer;
-    box-shadow: 0 4px 16px rgba(230,57,70,0.4);
-    transition: background 0.2s, transform 0.2s;
+    box-shadow: 0 4px 18px rgba(239,68,68,0.45);
+    transition: background 0.2s ease, transform 0.15s ease;
+    letter-spacing: 0.3px;
 }
 
-#btn-close-lose:hover {
-    background: linear-gradient(135deg, #c1121f, #9d0208);
+#btn-lose-ok:hover {
+    background: linear-gradient(135deg, #b91c1c, #991b1b);
     transform: translateY(-2px);
 }
+
+#btn-lose-ok:active {
+    transform: translateY(0);
+}
+

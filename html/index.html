@@ -8,81 +8,75 @@
 </head>
 <body>
 
-<!-- ======================================================
-     HAUPT-WRAPPER (versteckt bis geöffnet)
-     ====================================================== -->
-<div id="mtj-wrapper" class="hidden">
+<!-- OVERLAY (versteckt bis Item benutzt wird) -->
+<div id="app">
 
-    <!-- ---- TICKET-ANSICHT ---- -->
-    <div id="ticket-view" class="hidden">
+    <!-- ══════════════════════════════════
+         TICKET-SCREEN
+         ══════════════════════════════════ -->
+    <div id="screen-ticket">
         <div id="ticket-card">
-            <!-- Hintergrundbild des Tickets -->
-            <div id="ticket-bg"></div>
+            <div id="ticket-bg-img"></div>
+            <div id="ticket-inner">
 
-            <!-- Ticket-Inhalt -->
-            <div id="ticket-content">
-                <div id="ticket-logo">🎟️ MTJ LOS</div>
-                <div id="ticket-title"></div>
-
-                <!-- Rubbel-Bereich -->
-                <div id="scratch-area">
-                    <canvas id="scratch-canvas"></canvas>
-                    <div id="scratch-hint">
-                        <span>👆 Zum Aufrubbeln klicken!</span>
-                    </div>
+                <div id="ticket-header">
+                    <span id="ticket-logo-mark">🎟 MTJ LOS</span>
+                    <span id="ticket-name-label"></span>
                 </div>
 
-                <div id="ticket-footer">Viel Glück! • MTJ Server</div>
+                <div id="scratch-zone">
+                    <!-- Dekoratives Muster liegt UNTER dem Canvas -->
+                    <div id="scratch-under">
+                        <div class="scratch-stars">✦ ✦ ✦ ✦ ✦</div>
+                        <div class="scratch-cta-text">Hier Rubbeln!</div>
+                        <div class="scratch-stars">✦ ✦ ✦ ✦ ✦</div>
+                    </div>
+                    <!-- Rubbelschicht -->
+                    <canvas id="scratch-canvas"></canvas>
+                </div>
+
+                <div id="ticket-hint">🖱 Klicken &amp; Ziehen zum Aufrubbeln</div>
+
+                <div id="ticket-footer-row">
+                    <span id="ticket-footer-text">Viel Glück! • MTJ Server</span>
+                    <button id="btn-close-ticket" onclick="closeUI()">✖</button>
+                </div>
+
             </div>
         </div>
-
-        <button id="btn-close-ticket" onclick="closeUI()">✖ Schließen</button>
     </div>
 
-    <!-- ---- ERGEBNIS-ANSICHT ---- -->
-    <div id="result-view" class="hidden">
+    <!-- ══════════════════════════════════
+         WIN-SCREEN
+         ══════════════════════════════════ -->
+    <div id="screen-win">
+        <div id="confetti-root"></div>
 
-        <!-- GEWINN: Vollbild Geschenk-Animation -->
-        <div id="win-screen" class="hidden">
-            <div id="confetti-container"></div>
+        <div id="win-panel">
+            <div id="win-glow"></div>
 
-            <div id="gift-wrapper">
-                <div id="gift-box">
-                    <div id="gift-lid">
-                        <div id="gift-lid-ribbon"></div>
-                    </div>
-                    <div id="gift-body">
-                        <div id="gift-ribbon-v"></div>
-                        <div id="gift-ribbon-h"></div>
-                    </div>
-                </div>
-
-                <!-- Preis-Bild taucht aus dem Geschenk auf -->
-                <div id="prize-reveal">
-                    <div id="prize-image-wrap">
-                        <img id="prize-image" src="" alt="" />
-                        <div id="prize-emoji">🏆</div>
-                    </div>
-                    <div id="prize-glow"></div>
-                </div>
+            <div id="prize-visual">
+                <img id="prize-img" src="" alt="" />
+                <span id="prize-icon-fallback">🏆</span>
             </div>
 
-            <div id="win-text">
-                <div id="win-headline">🎉 GLÜCKWUNSCH! 🎉</div>
-                <div id="win-prize-label"></div>
-            </div>
+            <div id="win-badge">🎉 GLÜCKWUNSCH! 🎉</div>
+            <div id="win-prize-label"></div>
 
             <button id="btn-collect" onclick="collectPrize()">✅ Einsammeln</button>
         </div>
+    </div>
 
-        <!-- NIETE: Verlier-Bildschirm -->
-        <div id="lose-screen" class="hidden">
-            <div id="lose-icon">😢</div>
-            <div id="lose-headline">Leider nichts gewonnen...</div>
+    <!-- ══════════════════════════════════
+         LOSE-SCREEN
+         ══════════════════════════════════ -->
+    <div id="screen-lose">
+        <div id="lose-panel">
+            <div id="lose-emoji">😔</div>
+            <div id="lose-headline">Leider nichts gewonnen</div>
             <div id="lose-subtext"></div>
-            <button id="btn-close-lose" onclick="closeUI()">OK</button>
+            <button id="btn-lose-ok" onclick="closeUI()">OK, nächstes Mal!</button>
         </div>
-
     </div>
 
 </div>
