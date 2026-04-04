@@ -1,139 +1,331 @@
 /* ============================================================
-   RESET & GLOBALS
+   MTJ CASINO LOS – FSK 18 · Premium Gambling Design
    ============================================================ */
+
+/* ── RESET ── */
 *, *::before, *::after {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
 }
 
+/* ── GLOBALS ── */
+:root {
+    --c-bg:         #06010a;
+    --c-surface:    #110818;
+    --c-card:       #160d20;
+    --c-border:     #3a1f5a;
+    --c-gold:       #c9a84c;
+    --c-gold-light: #f5d060;
+    --c-gold-dark:  #8a6a20;
+    --c-red:        #8b0000;
+    --c-red-light:  #c0392b;
+    --c-neon-gold:  #ffe566;
+    --c-text:       #f0e0b0;
+    --c-text-dim:   #8a7060;
+    --c-green:      #22c55e;
+    --ff:           'Segoe UI', system-ui, Arial, sans-serif;
+}
+
 body {
-    font-family: 'Segoe UI', system-ui, Arial, sans-serif;
+    font-family: var(--ff);
     background: transparent;
     overflow: hidden;
     user-select: none;
-    /* NUI-Frame komplett unsichtbar wenn UI geschlossen */
     display: none;
     pointer-events: none;
 }
 
-/* ============================================================
-   ROOT APP WRAPPER
-   ============================================================ */
+/* ── ROOT APP ── */
 #app {
     position: fixed;
     inset: 0;
-    display: none;          /* JS setzt display:flex */
-    align-items: center;
-    justify-content: center;
-    background: rgba(0, 0, 0, 0.88);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    z-index: 9999;
     pointer-events: auto;
 }
 
-/* ── Screens (alle per JS gesteuert) ── */
+/* ── SCREENS ── */
+#screen-agegate,
 #screen-ticket,
 #screen-win,
-#screen-lose {
-    display: none;          /* JS setzt display:flex */
-    flex-direction: column;
+#screen-lose,
+#screen-admin {
+    position: fixed;
+    inset: 0;
+    display: none;
     align-items: center;
     justify-content: center;
-    width: 100%;
-    height: 100%;
+    background: rgba(0, 0, 0, 0.96);
 }
 
-/* ============================================================
-   TICKET CARD
-   ============================================================ */
+/* ════════════════════════════════════════════════════════════
+   FSK-18 ALTERSGATE
+   ════════════════════════════════════════════════════════════ */
+#screen-agegate {
+    background: radial-gradient(ellipse at center,
+        #1a0010 0%, #0a0005 60%, #000000 100%);
+}
+
+#age-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    padding: 48px 56px;
+    background: linear-gradient(160deg, #1a0c28 0%, #0f0618 100%);
+    border: 1px solid var(--c-gold-dark);
+    border-radius: 20px;
+    box-shadow:
+        0 0 0 1px rgba(201,168,76,.2),
+        0 0 60px rgba(139,0,0,.4),
+        0 40px 80px rgba(0,0,0,.9);
+    max-width: 480px;
+    text-align: center;
+    animation: gateIn .5s cubic-bezier(.16,1,.3,1) both;
+}
+
+@keyframes gateIn {
+    from { transform: scale(.85); opacity: 0; }
+    to   { transform: scale(1);   opacity: 1; }
+}
+
+#age-ornament-top,
+#age-ornament-bot {
+    font-size: 18px;
+    letter-spacing: 14px;
+    color: var(--c-gold-dark);
+}
+
+#age-fsk-badge {
+    width: 90px;
+    height: 90px;
+    background: linear-gradient(135deg, var(--c-red), #4a0000);
+    border: 3px solid var(--c-gold);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 30px rgba(139,0,0,.7), 0 0 60px rgba(139,0,0,.3);
+    margin: 4px auto;
+}
+
+#age-fsk-num {
+    font-size: 38px;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: -2px;
+    text-shadow: 0 0 20px rgba(255,100,100,.8);
+}
+
+#age-title {
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--c-gold-light);
+    letter-spacing: 5px;
+    text-shadow: 0 0 20px rgba(245,208,96,.5);
+}
+
+#age-subtitle {
+    font-size: 14px;
+    color: var(--c-text);
+    line-height: 1.6;
+    max-width: 340px;
+}
+
+#age-disclaimer {
+    font-size: 11px;
+    color: var(--c-text-dim);
+    letter-spacing: .5px;
+    border-top: 1px solid rgba(201,168,76,.15);
+    padding-top: 14px;
+    width: 100%;
+}
+
+#age-buttons {
+    display: flex;
+    gap: 14px;
+    width: 100%;
+}
+
+#btn-age-yes {
+    flex: 1;
+    padding: 13px;
+    background: linear-gradient(135deg, #8b0000, #c0392b);
+    color: #fff;
+    border: 1px solid rgba(255,100,100,.3);
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    cursor: pointer;
+    text-transform: uppercase;
+    box-shadow: 0 4px 20px rgba(139,0,0,.5);
+    transition: all .2s;
+}
+
+#btn-age-yes:hover {
+    background: linear-gradient(135deg, #a00000, #e04030);
+    transform: translateY(-1px);
+}
+
+#btn-age-no {
+    flex: 1;
+    padding: 13px;
+    background: rgba(255,255,255,.04);
+    color: var(--c-text-dim);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all .2s;
+}
+
+#btn-age-no:hover {
+    background: rgba(255,255,255,.08);
+    color: var(--c-text);
+}
+
+/* ════════════════════════════════════════════════════════════
+   HINTERGRUND PARTIKEL (Ticket-Screen)
+   ════════════════════════════════════════════════════════════ */
+#screen-ticket {
+    background: radial-gradient(ellipse at center,
+        #1a0820 0%, #0d0414 50%, #06010a 100%);
+}
+
+#casino-bg-particles {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.bg-suit {
+    position: absolute;
+    font-size: 24px;
+    opacity: .04;
+    animation: floatSuit linear infinite;
+    color: var(--c-gold);
+}
+
+@keyframes floatSuit {
+    0%   { transform: translateY(110vh) rotate(0deg);  opacity: 0;   }
+    10%  { opacity: .05; }
+    90%  { opacity: .05; }
+    100% { transform: translateY(-20px) rotate(360deg); opacity: 0; }
+}
+
+/* ════════════════════════════════════════════════════════════
+   TICKET WRAP & CARD
+   ════════════════════════════════════════════════════════════ */
+#ticket-wrap {
+    position: relative;
+    animation: ticketDrop .55s cubic-bezier(.16,1,.3,1) both;
+}
+
+@keyframes ticketDrop {
+    from { transform: translateY(-50px) scale(.92); opacity: 0; }
+    to   { transform: translateY(0)     scale(1);   opacity: 1; }
+}
+
 #ticket-card {
     position: relative;
-    width: 500px;
-    height: 290px;
+    width: 540px;
+    background: linear-gradient(160deg, #1e0d2e 0%, #130920 50%, #0e0616 100%);
     border-radius: 20px;
     overflow: hidden;
-    /* Gold border glow */
     box-shadow:
-        0 0 0 1px rgba(255, 200, 60, 0.35),
-        0 0 30px rgba(255, 190, 30, 0.18),
-        0 24px 60px rgba(0, 0, 0, 0.75);
-    animation: cardDrop 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+        0 0 0 1px var(--c-gold-dark),
+        0 0 0 3px rgba(201,168,76,.1),
+        0 0 40px rgba(139,0,0,.3),
+        0 30px 70px rgba(0,0,0,.9);
 }
 
-@keyframes cardDrop {
-    from { transform: translateY(-40px) scale(0.95); opacity: 0; }
-    to   { transform: translateY(0)     scale(1);    opacity: 1; }
-}
-
-/* Hintergrundbild-Ebene */
 #ticket-bg-img {
     position: absolute;
     inset: 0;
     background-size: cover;
     background-position: center;
-    background-color: #0d0d1a;
+    opacity: .35;
 }
 
-/* Dunkler Overlay über dem Hintergrund */
-#ticket-inner {
+/* ── Zierleisten ── */
+#ticket-deco-top,
+#ticket-deco-bot {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 12px 20px;
+    background: linear-gradient(90deg,
+        transparent, rgba(201,168,76,.12), rgba(201,168,76,.22),
+        rgba(201,168,76,.12), transparent);
+    border-bottom: 1px solid rgba(201,168,76,.2);
+}
+
+#ticket-deco-bot {
+    border-bottom: none;
+    border-top: 1px solid rgba(201,168,76,.2);
+}
+
+.suit {
+    font-size: 16px;
+    color: var(--c-gold);
+    text-shadow: 0 0 10px rgba(201,168,76,.6);
+}
+
+.suit.red {
+    color: #c0392b;
+    text-shadow: 0 0 10px rgba(192,57,43,.6);
+}
+
+.ticket-serial {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    color: rgba(201,168,76,.6);
+}
+
+/* ── Ticket Body ── */
+#ticket-body {
     position: relative;
     z-index: 2;
-    height: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: space-between;
-    padding: 20px 28px 16px;
-    background: linear-gradient(
-        180deg,
-        rgba(0, 0, 0, 0.55) 0%,
-        rgba(0, 0, 0, 0.20) 45%,
-        rgba(0, 0, 0, 0.65) 100%
-    );
-}
-
-/* ── Header ── */
-#ticket-header {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-#ticket-logo-mark {
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 5px;
-    text-transform: uppercase;
-    color: rgba(255, 210, 70, 0.75);
-    text-shadow: 0 0 12px rgba(255,200,50,0.4);
+    gap: 16px;
+    padding: 22px 32px 18px;
 }
 
 #ticket-name-label {
-    font-size: 18px;
+    font-size: 26px;
     font-weight: 900;
-    color: #fff;
-    text-shadow: 0 2px 12px rgba(0,0,0,0.9), 0 0 24px rgba(255,210,50,0.4);
-    letter-spacing: 1px;
+    color: var(--c-gold-light);
+    text-shadow:
+        0 0 20px rgba(245,208,96,.6),
+        0 2px 12px rgba(0,0,0,.9);
+    letter-spacing: 3px;
+    text-transform: uppercase;
 }
 
-/* ── Scratch Zone ── */
+/* ── Rubbelfeld ── */
 #scratch-zone {
     position: relative;
-    width: 360px;
-    height: 100px;
+    width: 400px;
+    height: 110px;
     border-radius: 12px;
     overflow: hidden;
     cursor: crosshair;
-    /* Goldener Rahmen */
     box-shadow:
-        0 0 0 1.5px rgba(255,200,60,0.5),
-        0 4px 20px rgba(0,0,0,0.5);
+        0 0 0 1px var(--c-gold-dark),
+        0 0 0 3px rgba(201,168,76,.08),
+        inset 0 0 30px rgba(0,0,0,.5);
 }
 
-/* Dekoratives Muster unter dem Canvas */
 #scratch-under {
     position: absolute;
     inset: 0;
@@ -141,26 +333,34 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
-    background: linear-gradient(135deg, #1a1a00, #2a2200, #1a1a00);
-    padding: 8px;
+    gap: 6px;
+    /* Filz-Optik */
+    background:
+        radial-gradient(ellipse at 30% 50%, rgba(12,60,12,.9) 0%, transparent 70%),
+        radial-gradient(ellipse at 70% 50%, rgba(12,60,12,.9) 0%, transparent 70%),
+        linear-gradient(135deg, #0a3a0a, #0d4a0d, #0a3a0a);
+    padding: 10px;
 }
 
-.scratch-stars {
-    font-size: 14px;
-    color: rgba(255, 200, 50, 0.5);
+.scratch-deco-row {
+    display: flex;
+    gap: 14px;
+    font-size: 12px;
+    color: rgba(201,168,76,.4);
+    letter-spacing: 4px;
+}
+
+#scratch-cta {
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--c-gold-light);
     letter-spacing: 6px;
-}
-
-.scratch-cta-text {
-    font-size: 15px;
-    font-weight: 700;
-    color: rgba(255, 200, 50, 0.8);
-    letter-spacing: 2px;
     text-transform: uppercase;
+    text-shadow:
+        0 0 16px rgba(245,208,96,.8),
+        0 0 32px rgba(245,208,96,.4);
 }
 
-/* Rubbelschicht */
 #scratch-canvas {
     position: absolute;
     inset: 0;
@@ -168,62 +368,90 @@ body {
     height: 100%;
     border-radius: 12px;
     cursor: crosshair;
-    /* Verhindert Glitch bei touch-events */
     touch-action: none;
 }
 
-/* ── Hinweistext ── */
 #ticket-hint {
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.45);
-    letter-spacing: 0.5px;
+    font-size: 11px;
+    color: rgba(201,168,76,.45);
+    letter-spacing: 1px;
 }
 
 /* ── Footer-Zeile ── */
-#ticket-footer-row {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
 #ticket-footer-text {
-    font-size: 10px;
-    color: rgba(255,255,255,0.35);
-    letter-spacing: 2.5px;
+    font-size: 9px;
+    color: rgba(201,168,76,.35);
+    letter-spacing: 3px;
     text-transform: uppercase;
+    flex: 1;
+    text-align: center;
 }
 
 #btn-close-ticket {
-    width: 30px;
-    height: 30px;
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.18);
+    position: absolute;
+    right: 16px;
+    width: 26px;
+    height: 26px;
+    background: rgba(139,0,0,.3);
+    border: 1px solid rgba(192,57,43,.4);
     border-radius: 50%;
-    color: rgba(255,255,255,0.6);
-    font-size: 13px;
+    color: rgba(255,120,100,.7);
+    font-size: 12px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.2s, color 0.2s;
+    transition: all .2s;
     line-height: 1;
 }
 
 #btn-close-ticket:hover {
-    background: rgba(255,80,80,0.3);
-    border-color: rgba(255,80,80,0.5);
+    background: rgba(139,0,0,.6);
     color: #fff;
 }
 
-/* ============================================================
-   WIN SCREEN
-   ============================================================ */
-#screen-win {
-    position: relative;
+/* ── FSK Badge ── */
+#fsk-corner-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #8b0000, #c0392b);
+    border: 2px solid var(--c-gold);
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 16px rgba(139,0,0,.6);
+    line-height: 1;
 }
 
-#confetti-root {
+#fsk-corner-badge span {
+    font-size: 7px;
+    font-weight: 800;
+    color: rgba(255,255,255,.8);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+#fsk-corner-badge strong {
+    font-size: 16px;
+    color: #fff;
+    font-weight: 900;
+}
+
+/* ════════════════════════════════════════════════════════════
+   WIN-SCREEN
+   ════════════════════════════════════════════════════════════ */
+#screen-win {
+    background: radial-gradient(ellipse at center,
+        #1a0e00 0%, #0d0700 50%, #000000 100%);
+}
+
+/* ── Münzen-Regen ── */
+#coin-rain {
     position: fixed;
     inset: 0;
     pointer-events: none;
@@ -231,192 +459,281 @@ body {
     overflow: hidden;
 }
 
-.confetti-piece {
+.coin {
     position: absolute;
-    top: -24px;
-    opacity: 0.9;
-    animation: confettiFall linear forwards;
+    top: -30px;
+    font-size: 22px;
+    animation: coinFall linear forwards;
+    filter: drop-shadow(0 0 8px rgba(255,215,0,.8));
 }
 
-@keyframes confettiFall {
-    0%   { transform: translateY(0) rotate(0deg);     opacity: 1; }
-    85%  { opacity: 1; }
-    100% { transform: translateY(105vh) rotate(540deg); opacity: 0; }
+@keyframes coinFall {
+    0%   { transform: translateY(0) rotate(0deg)   scale(1);    opacity: 1; }
+    80%  { opacity: 1; }
+    100% { transform: translateY(108vh) rotate(720deg) scale(.7); opacity: 0; }
 }
 
-/* Win panel */
-#win-panel {
+/* ── Win Card ── */
+#win-card {
     position: relative;
     z-index: 2;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 22px;
-    animation: winPanelIn 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+    gap: 20px;
+    padding: 40px 60px;
+    background: linear-gradient(160deg, #1e1000 0%, #120a00 100%);
+    border: 1px solid var(--c-gold-dark);
+    border-radius: 24px;
+    box-shadow:
+        0 0 0 1px rgba(201,168,76,.25),
+        0 0 60px rgba(201,168,76,.15),
+        0 0 120px rgba(139,0,0,.2),
+        0 40px 80px rgba(0,0,0,.9);
+    animation: winCardIn .6s cubic-bezier(.16,1,.3,1) both;
+    max-width: 520px;
 }
 
-@keyframes winPanelIn {
-    from { transform: scale(0.7); opacity: 0; }
-    to   { transform: scale(1);   opacity: 1; }
+@keyframes winCardIn {
+    from { transform: scale(.7) rotate(-3deg); opacity: 0; }
+    to   { transform: scale(1)  rotate(0deg);  opacity: 1; }
 }
 
-/* Gold glow ring behind prize */
-#win-glow {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 280px;
-    height: 280px;
-    background: radial-gradient(circle, rgba(255,210,30,0.28) 0%, transparent 68%);
-    animation: glowPulse 2s ease-in-out infinite;
-    pointer-events: none;
-    z-index: 0;
+#win-top-deco {
+    font-size: 16px;
+    letter-spacing: 16px;
+    color: var(--c-gold-dark);
 }
 
-@keyframes glowPulse {
-    0%, 100% { transform: translate(-50%, -50%) scale(1);    opacity: 0.7; }
-    50%       { transform: translate(-50%, -50%) scale(1.18); opacity: 1;   }
+#win-jackpot-label {
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 10px;
+    text-transform: uppercase;
+    color: var(--c-gold);
+    text-shadow: 0 0 20px rgba(201,168,76,.7);
+    animation: jackpotPulse 1.5s ease-in-out infinite;
 }
 
-/* Prize image / icon */
+@keyframes jackpotPulse {
+    0%, 100% { opacity: .8; text-shadow: 0 0 20px rgba(201,168,76,.5); }
+    50%       { opacity: 1;  text-shadow: 0 0 40px rgba(245,208,96,.9), 0 0 80px rgba(201,168,76,.4); }
+}
+
+/* ── Prize Visual ── */
 #prize-visual {
     position: relative;
-    z-index: 1;
-    width: 140px;
-    height: 140px;
+    width: 150px;
+    height: 150px;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
+#prize-glow-ring {
+    position: absolute;
+    inset: -10px;
+    border-radius: 50%;
+    background: conic-gradient(
+        from 0deg,
+        rgba(201,168,76,0), rgba(201,168,76,.6), rgba(245,208,96,.8),
+        rgba(201,168,76,.6), rgba(201,168,76,0), rgba(139,0,0,.4),
+        rgba(201,168,76,0), rgba(201,168,76,.6), rgba(245,208,96,.8),
+        rgba(201,168,76,0)
+    );
+    animation: ringRotate 3s linear infinite;
+    filter: blur(3px);
+}
+
+@keyframes ringRotate {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
 #prize-img {
+    position: relative;
+    z-index: 1;
     max-width: 120px;
     max-height: 120px;
     object-fit: contain;
-    filter: drop-shadow(0 0 22px rgba(255,215,0,0.9));
+    filter: drop-shadow(0 0 24px rgba(201,168,76,.9));
     border-radius: 14px;
     display: none;
 }
 
 #prize-icon-fallback {
+    position: relative;
+    z-index: 1;
     font-size: 90px;
-    filter: drop-shadow(0 0 20px rgba(255,210,30,0.7));
+    filter: drop-shadow(0 0 20px rgba(201,168,76,.8));
     line-height: 1;
 }
 
-/* Win badge */
-#win-badge {
-    font-size: 34px;
+#win-headline {
+    font-size: 36px;
     font-weight: 900;
-    color: #ffd60a;
+    color: var(--c-gold-light);
     text-shadow:
-        0 0 24px rgba(255,214,10,0.8),
-        0 3px 16px rgba(0,0,0,0.9);
-    letter-spacing: 2px;
+        0 0 30px rgba(245,208,96,.8),
+        0 4px 20px rgba(0,0,0,.9);
+    letter-spacing: 3px;
     text-align: center;
+    animation: winPop .5s cubic-bezier(.34,1.56,.64,1) both;
 }
 
-/* Prize label */
+@keyframes winPop {
+    from { transform: scale(.4); opacity: 0; }
+    to   { transform: scale(1);  opacity: 1; }
+}
+
 #win-prize-label {
-    font-size: 22px;
+    font-size: 24px;
     font-weight: 700;
     color: #fff;
-    text-shadow: 0 2px 10px rgba(0,0,0,0.8);
-    letter-spacing: 0.5px;
+    text-shadow: 0 2px 10px rgba(0,0,0,.8);
+    letter-spacing: 1px;
     text-align: center;
 }
 
-/* Collect button */
-#btn-collect {
-    padding: 14px 52px;
-    background: linear-gradient(135deg, #22c55e, #16a34a);
-    color: #fff;
-    border: none;
-    border-radius: 14px;
+#win-divider, #lose-divider {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--c-gold-dark);
     font-size: 18px;
-    font-weight: 800;
+}
+
+#win-divider::before, #win-divider::after,
+#lose-divider::before, #lose-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(201,168,76,.3), transparent);
+}
+
+#btn-collect {
+    padding: 16px 52px;
+    background: linear-gradient(135deg, #7a5c00, #c9a84c, #f5d060, #c9a84c, #7a5c00);
+    background-size: 200% 100%;
+    color: #0d0700;
+    border: 1px solid rgba(201,168,76,.5);
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    text-transform: uppercase;
     cursor: pointer;
-    letter-spacing: 0.5px;
-    box-shadow: 0 6px 28px rgba(34,197,94,0.5);
-    transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+    box-shadow: 0 6px 30px rgba(201,168,76,.4), 0 0 60px rgba(201,168,76,.1);
+    transition: background-position .3s, transform .15s, box-shadow .2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 #btn-collect:hover {
-    background: linear-gradient(135deg, #16a34a, #166534);
-    box-shadow: 0 8px 36px rgba(34,197,94,0.7);
+    background-position: 100% 0;
     transform: translateY(-2px);
+    box-shadow: 0 10px 40px rgba(201,168,76,.6), 0 0 80px rgba(201,168,76,.2);
 }
 
-#btn-collect:active {
-    transform: translateY(0);
+#btn-collect:active { transform: translateY(0); }
+
+#win-disclaimer, #lose-disclaimer {
+    font-size: 10px;
+    color: var(--c-text-dim);
+    letter-spacing: 1px;
 }
 
-/* ============================================================
-   LOSE SCREEN
-   ============================================================ */
-#lose-panel {
+/* ════════════════════════════════════════════════════════════
+   LOSE-SCREEN
+   ════════════════════════════════════════════════════════════ */
+#screen-lose {
+    background: radial-gradient(ellipse at center,
+        #0d0005 0%, #060003 60%, #000000 100%);
+}
+
+#lose-card {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 18px;
+    padding: 40px 56px;
+    background: linear-gradient(160deg, #120018 0%, #080010 100%);
+    border: 1px solid rgba(139,0,0,.4);
+    border-radius: 24px;
+    box-shadow:
+        0 0 0 1px rgba(139,0,0,.15),
+        0 0 40px rgba(139,0,0,.2),
+        0 40px 80px rgba(0,0,0,.9);
+    animation: loseCardIn .5s cubic-bezier(.16,1,.3,1) both;
     text-align: center;
-    animation: loseIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-@keyframes loseIn {
+@keyframes loseCardIn {
     from { transform: translateY(30px); opacity: 0; }
     to   { transform: translateY(0);    opacity: 1; }
 }
 
-#lose-emoji {
-    font-size: 88px;
-    animation: loseShake 0.6s ease 0.2s both;
-    line-height: 1;
+#lose-top-deco {
+    font-size: 14px;
+    letter-spacing: 12px;
+    color: rgba(139,0,0,.5);
 }
 
-@keyframes loseShake {
-    0%, 100% { transform: rotate(0deg); }
-    20%       { transform: rotate(-10deg); }
-    40%       { transform: rotate(10deg); }
-    60%       { transform: rotate(-7deg); }
-    80%       { transform: rotate(7deg); }
+#lose-icon-wrap {
+    position: relative;
+}
+
+#lose-broken-chip {
+    font-size: 80px;
+    filter: grayscale(.6) drop-shadow(0 0 16px rgba(139,0,0,.4));
+    animation: loseWobble .8s ease .2s both;
+}
+
+@keyframes loseWobble {
+    0%, 100% { transform: rotate(0);    }
+    20%       { transform: rotate(-8deg); }
+    40%       { transform: rotate(8deg);  }
+    60%       { transform: rotate(-5deg); }
+    80%       { transform: rotate(5deg);  }
 }
 
 #lose-headline {
-    font-size: 30px;
-    font-weight: 800;
-    color: #f87171;
-    text-shadow: 0 2px 14px rgba(0,0,0,0.8);
+    font-size: 28px;
+    font-weight: 900;
+    color: #c0392b;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    text-shadow: 0 0 20px rgba(192,57,43,.5);
 }
 
 #lose-subtext {
-    font-size: 15px;
-    color: rgba(255,255,255,0.55);
-    max-width: 320px;
+    font-size: 14px;
+    color: var(--c-text-dim);
+    max-width: 300px;
+    line-height: 1.6;
 }
 
 #btn-lose-ok {
-    margin-top: 6px;
-    padding: 12px 42px;
-    background: linear-gradient(135deg, #ef4444, #b91c1c);
-    color: #fff;
-    border: none;
+    padding: 14px 48px;
+    background: linear-gradient(135deg, #5a0000, #8b0000);
+    color: rgba(255,200,180,.9);
+    border: 1px solid rgba(192,57,43,.4);
     border-radius: 12px;
-    font-size: 16px;
-    font-weight: 700;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 3px;
+    text-transform: uppercase;
     cursor: pointer;
-    box-shadow: 0 4px 18px rgba(239,68,68,0.45);
-    transition: background 0.2s ease, transform 0.15s ease;
-    letter-spacing: 0.3px;
+    box-shadow: 0 4px 20px rgba(139,0,0,.4);
+    transition: all .2s;
 }
 
 #btn-lose-ok:hover {
-    background: linear-gradient(135deg, #b91c1c, #991b1b);
-    transform: translateY(-2px);
+    background: linear-gradient(135deg, #7a0000, #a00000);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 28px rgba(139,0,0,.6);
 }
 
-#btn-lose-ok:active {
-    transform: translateY(0);
-}
 

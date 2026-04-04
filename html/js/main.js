@@ -8,18 +8,29 @@ let scratchDone       = false;
 let isScratching      = false;
 let canvas, ctx;
 let lastProgressCheck = 0;
-const SCRATCH_THRESHOLD      = 0.50;   // 50 % freigerubbelt → fertig
-const PROGRESS_CHECK_INTERVAL = 120;   // ms zwischen Canvas-Analysen
-let scratchHandlers = null;
+const SCRATCH_THRESHOLD      = 0.48;
+const PROGRESS_CHECK_INTERVAL = 100;
+let scratchHandlers   = null;
+let ageConfirmed      = false;
+
+/* ── pending ticket data (wartet auf Age-Gate) ── */
+let pendingTicket     = null;
 
 /* ============================================================
-   HILFSFUNKTIONEN: Sichtbarkeit
+   SICHTBARKEIT
    ============================================================ */
-function show(id, display) {
-    document.getElementById(id).style.display = display || 'flex';
+function showScreen(id) {
+    ['screen-agegate','screen-ticket','screen-win','screen-lose'].forEach(s => {
+        const el = document.getElementById(s);
+        if (el) el.style.display = (s === id) ? 'flex' : 'none';
+    });
 }
-function hide(id) {
-    document.getElementById(id).style.display = 'none';
+
+function hideAll() {
+    ['screen-agegate','screen-ticket','screen-win','screen-lose'].forEach(s => {
+        const el = document.getElementById(s);
+        if (el) el.style.display = 'none';
+    });
 }
 
 /* ============================================================
@@ -29,40 +40,77 @@ window.addEventListener('message', (event) => {
     const data = event.data;
     if (!data || !data.action) return;
 
-    if (data.action === 'openTicket') openTicket(data);
-    if (data.action === 'showResult') showResult(data);
+    if (data.action === 'openTicket')  handleOpenTicket(data);
+    if (data.action === 'showResult')  showResult(data);
+    if (data.action === 'admin:open')  openAdmin(data);
 });
 
 /* ============================================================
-   TICKET ÖFFNEN
+   TICKET ÖFFNEN – erst Age-Gate zeigen
+   ============================================================ */
+function handleOpenTicket(data) {
+    document.body.style.display      = 'block';
+    document.body.style.pointerEvents = 'auto';
+
+    if (!ageConfirmed) {
+        pendingTicket = data;
+        showScreen('screen-agegate');
+        return;
+    }
+    openTicket(data);
+}
+
+/* ── Age-Gate bestätigen ── */
+function confirmAge() {
+    ageConfirmed  = true;
+    if (pendingTicket) {
+        openTicket(pendingTicket);
+        pendingTicket = null;
+    }
+}
+
+/* ============================================================
+   TICKET UI
    ============================================================ */
 function openTicket(data) {
     currentItem = data.itemName;
     scratchDone = false;
 
-    // Body sichtbar machen
-    document.body.style.display = 'block';
-    document.body.style.pointerEvents = 'auto';
-
-    // Ticket-Hintergrund
+    /* Hintergrund */
     const bg = document.getElementById('ticket-bg-img');
     if (data.ticketBg && data.ticketBg !== '') {
         bg.style.backgroundImage = `url('images/${data.ticketBg}')`;
     } else {
-        bg.style.backgroundImage = 'linear-gradient(135deg, #0d0d1a 0%, #131328 50%, #0a0a1a 100%)';
+        bg.style.backgroundImage = '';
     }
 
-    // Titel
-    document.getElementById('ticket-name-label').textContent = data.label || 'Los';
+    /* Label */
+    document.getElementById('ticket-name-label').textContent = data.label || 'LOS';
 
-    // Screens umschalten
-    hide('screen-win');
-    hide('screen-lose');
-    show('screen-ticket');
-    show('app');
+    /* Partikel */
+    spawnBgSuits();
 
-    // Canvas nach dem Anzeigen initialisieren
+    showScreen('screen-ticket');
+
     requestAnimationFrame(() => initScratchCanvas());
+}
+
+/* ── Casino-Hintergrund-Kartenzeichen ── */
+function spawnBgSuits() {
+    const root = document.getElementById('casino-bg-particles');
+    if (!root) return;
+    root.innerHTML = '';
+    const suits = ['♠','♥','♦','♣'];
+    for (let i = 0; i < 20; i++) {
+        const s = document.createElement('div');
+        s.className = 'bg-suit';
+        s.textContent = suits[Math.floor(Math.random() * suits.length)];
+        s.style.left     = `${Math.random() * 100}vw`;
+        s.style.fontSize = `${16 + Math.random() * 32}px`;
+        s.style.animationDuration = `${8 + Math.random() * 14}s`;
+        s.style.animationDelay    = `${Math.random() * 10}s`;
+        root.appendChild(s);
+    }
 }
 
 /* ============================================================
@@ -87,44 +135,62 @@ function initScratchCanvas() {
     canvas = document.getElementById('scratch-canvas');
     ctx    = canvas.getContext('2d');
 
-    const w = zone.offsetWidth  || 360;
-    const h = zone.offsetHeight || 100;
+    const w = zone.offsetWidth  || 400;
+    const h = zone.offsetHeight || 110;
     canvas.width  = w;
     canvas.height = h;
 
-    // Silber-Rubbelschicht zeichnen
+    /* Silber-Metallic Schicht */
     const grad = ctx.createLinearGradient(0, 0, w, h);
-    grad.addColorStop(0,    '#b8b8b8');
-    grad.addColorStop(0.3,  '#e0e0e0');
-    grad.addColorStop(0.5,  '#f0f0f0');
-    grad.addColorStop(0.7,  '#e0e0e0');
-    grad.addColorStop(1,    '#a8a8a8');
+    grad.addColorStop(0,   '#9a9a9a');
+    grad.addColorStop(0.2, '#d0d0d0');
+    grad.addColorStop(0.35,'#f2f2f2');
+    grad.addColorStop(0.5, '#e8e8e8');
+    grad.addColorStop(0.65,'#d5d5d5');
+    grad.addColorStop(0.8, '#c0c0c0');
+    grad.addColorStop(1,   '#989898');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
 
-    // Textur-Muster
-    ctx.fillStyle = 'rgba(100,100,100,0.08)';
-    for (let x = 0; x < w; x += 4) {
-        for (let y = 0; y < h; y += 4) {
-            if ((x + y) % 8 === 0) ctx.fillRect(x, y, 2, 2);
+    /* Feine Textur-Linien */
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth   = 0.5;
+    for (let x = 0; x < w; x += 3) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x + h * 0.3, h);
+        ctx.stroke();
+    }
+
+    /* Kartenzeichen-Muster */
+    ctx.fillStyle = 'rgba(80,80,80,0.06)';
+    ctx.font      = '11px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const suits = ['♠','♥','♦','♣'];
+    let si = 0;
+    for (let cx = 30; cx < w - 20; cx += 40) {
+        for (let cy = 18; cy < h - 10; cy += 30) {
+            ctx.fillText(suits[si % 4], cx, cy);
+            si++;
         }
     }
 
-    // Rubbelhinweis-Text
-    ctx.fillStyle = 'rgba(60,60,60,0.55)';
-    ctx.font = 'bold 15px Segoe UI, Arial';
+    /* Rubbeltext */
+    ctx.fillStyle = 'rgba(50,50,50,0.5)';
+    ctx.font      = 'bold 13px Segoe UI, Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('✨ Hier Rubbeln! ✨', w / 2, h / 2);
+    ctx.fillText('✨ HIER RUBBELN – JETZT GLÜCK HERAUSRUBBELN! ✨', w / 2, h / 2);
 
-    // Event-Handler
+    /* Event-Handler */
     scratchHandlers = {
         mousedown:  startScratch,
         mousemove:  doScratch,
         mouseup:    stopScratch,
         mouseleave: stopScratch,
         touchstart: (e) => { e.preventDefault(); startScratch(getTouchPos(e)); },
-        touchmove:  (e) => { e.preventDefault(); doScratch(getTouchPos(e));   },
+        touchmove:  (e) => { e.preventDefault(); doScratch(getTouchPos(e));    },
         touchend:   stopScratch,
     };
 
@@ -140,8 +206,8 @@ function initScratchCanvas() {
 function getCanvasPos(e) {
     const rect = canvas.getBoundingClientRect();
     return {
-        x: (e.clientX - rect.left) * (canvas.width  / rect.width),
-        y: (e.clientY - rect.top)  * (canvas.height / rect.height),
+        x: (e.clientX - rect.left)  * (canvas.width  / rect.width),
+        y: (e.clientY - rect.top)   * (canvas.height / rect.height),
     };
 }
 
@@ -165,14 +231,12 @@ function doScratch(e) {
     }
 }
 
-function stopScratch() {
-    isScratching = false;
-}
+function stopScratch() { isScratching = false; }
 
 function erase(pos) {
     ctx.globalCompositeOperation = 'destination-out';
     ctx.beginPath();
-    ctx.arc(pos.x, pos.y, 30, 0, Math.PI * 2);
+    ctx.arc(pos.x, pos.y, 32, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalCompositeOperation = 'source-over';
 }
@@ -180,19 +244,16 @@ function erase(pos) {
 function checkScratchProgress() {
     const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
     let cleared = 0;
-    const total = canvas.width * canvas.height;
-    // Zähle komplett transparente Pixel (Alpha === 0)
+    const total  = canvas.width * canvas.height;
     for (let i = 3; i < imgData.length; i += 4) {
         if (imgData[i] === 0) cleared++;
     }
     if (cleared / total >= SCRATCH_THRESHOLD) {
         scratchDone = true;
         removeScratchListeners();
-        // Canvas weich ausblenden
-        canvas.style.transition = 'opacity 0.4s ease';
-        canvas.style.opacity = '0';
-        // Server informieren
-        setTimeout(sendScratchEvent, 200);
+        canvas.style.transition = 'opacity 0.5s ease';
+        canvas.style.opacity    = '0';
+        setTimeout(sendScratchEvent, 250);
     }
 }
 
@@ -213,10 +274,7 @@ function sendScratchEvent(retries) {
    ERGEBNIS ANZEIGEN
    ============================================================ */
 function showResult(data) {
-    // Ticket-Screen ausblenden
-    hide('screen-ticket');
-
-    // Maus sicherstellen
+    hideAll();
     document.body.style.pointerEvents = 'auto';
 
     if (data.win) {
@@ -228,65 +286,52 @@ function showResult(data) {
 
 /* ── GEWINN ── */
 function showWin(data) {
-    show('screen-win');
+    showScreen('screen-win');
 
-    // Preis-Bild oder Fallback-Icon
     const img      = document.getElementById('prize-img');
     const fallback = document.getElementById('prize-icon-fallback');
 
     if (data.image && data.image !== '') {
-        img.src = `images/${data.image}`;
-        img.style.display = 'block';
+        img.src              = `images/${data.image}`;
+        img.style.display    = 'block';
         fallback.style.display = 'none';
         img.onerror = () => {
-            img.style.display     = 'none';
+            img.style.display      = 'none';
             fallback.style.display = 'block';
         };
     } else {
-        img.style.display     = 'none';
+        img.style.display      = 'none';
         fallback.style.display = 'block';
     }
 
     document.getElementById('win-prize-label').textContent = data.label || '';
 
-    // Konfetti sofort starten
-    spawnConfetti();
-
-    // Sammeln-Button direkt sichtbar (kein animiertes Einblenden mehr)
-    // → verhindert das Bug mit gestapelten CSS-Delays
-    document.getElementById('btn-collect').style.opacity   = '1';
-    document.getElementById('btn-collect').style.transform = 'none';
+    spawnCoinRain();
 }
 
 /* ── NIETE ── */
 function showLose(data) {
-    show('screen-lose');
+    showScreen('screen-lose');
     document.getElementById('lose-subtext').textContent =
         data.label || 'Vielleicht klappt es beim nächsten Mal!';
 }
 
-/* ── KONFETTI ── */
-const CONFETTI_COLORS = [
-    '#ffd60a','#ff6b6b','#4ecdc4','#45b7d1',
-    '#96ceb4','#ff9ff3','#54a0ff','#5f27cd',
-    '#ff9f43','#00d2d3',
-];
+/* ── Münzen-Regen ── */
+const COIN_EMOJIS = ['🪙','💰','💎','⭐','🌟','✨'];
 
-function spawnConfetti() {
-    const root = document.getElementById('confetti-root');
+function spawnCoinRain() {
+    const root = document.getElementById('coin-rain');
+    if (!root) return;
     root.innerHTML = '';
-    for (let i = 0; i < 90; i++) {
-        const p = document.createElement('div');
-        p.className = 'confetti-piece';
-        const size = 6 + Math.random() * 10;
-        p.style.left              = `${Math.random() * 100}vw`;
-        p.style.width             = `${size}px`;
-        p.style.height            = `${size * (1.2 + Math.random())}px`;
-        p.style.background        = CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)];
-        p.style.borderRadius      = Math.random() > 0.45 ? '50%' : '2px';
-        p.style.animationDuration = `${1.6 + Math.random() * 2.6}s`;
-        p.style.animationDelay    = `${Math.random() * 1.4}s`;
-        root.appendChild(p);
+    for (let i = 0; i < 60; i++) {
+        const c = document.createElement('div');
+        c.className   = 'coin';
+        c.textContent = COIN_EMOJIS[Math.floor(Math.random() * COIN_EMOJIS.length)];
+        c.style.left              = `${Math.random() * 100}vw`;
+        c.style.fontSize          = `${16 + Math.random() * 18}px`;
+        c.style.animationDuration = `${1.4 + Math.random() * 2.2}s`;
+        c.style.animationDelay    = `${Math.random() * 1.6}s`;
+        root.appendChild(c);
     }
 }
 
@@ -296,7 +341,7 @@ function spawnConfetti() {
 function collectPrize() { closeUI(); }
 
 function closeUI() {
-    hide('app');
+    hideAll();
     resetUI();
     fetch(`https://${window.location.hostname}/closeUI`, {
         method:  'POST',
@@ -313,22 +358,22 @@ function resetUI() {
 
     removeScratchListeners();
 
-    hide('screen-ticket');
-    hide('screen-win');
-    hide('screen-lose');
+    const coinRain = document.getElementById('coin-rain');
+    if (coinRain) coinRain.innerHTML = '';
 
-    document.getElementById('confetti-root').innerHTML = '';
-    document.getElementById('prize-img').src           = '';
+    const prizeImg = document.getElementById('prize-img');
+    if (prizeImg)  prizeImg.src = '';
 
-    // Canvas zurücksetzen
     if (canvas && ctx) {
         canvas.style.transition = '';
         canvas.style.opacity    = '1';
         ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 
-    // Body wieder verstecken
-    document.body.style.display      = 'none';
+    const particles = document.getElementById('casino-bg-particles');
+    if (particles) particles.innerHTML = '';
+
+    document.body.style.display       = 'none';
     document.body.style.pointerEvents = 'none';
 }
 

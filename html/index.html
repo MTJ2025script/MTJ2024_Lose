@@ -3,84 +3,201 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MTJ Los</title>
+    <title>MTJ Casino Los</title>
     <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/admin.css" />
 </head>
 <body>
 
-<!-- OVERLAY (versteckt bis Item benutzt wird) -->
+<!-- ══════════════════════════════════════════════════════════
+     ROOT APP
+     ══════════════════════════════════════════════════════════ -->
 <div id="app">
 
-    <!-- ══════════════════════════════════
-         TICKET-SCREEN
-         ══════════════════════════════════ -->
+    <!-- ── FSK-18 ALTERSGATE ── -->
+    <div id="screen-agegate">
+        <div id="age-box">
+            <div id="age-ornament-top">♠ ♥ ♦ ♣</div>
+            <div id="age-fsk-badge">
+                <span id="age-fsk-num">18</span>
+            </div>
+            <div id="age-title">ALTERSVERIFIKATION</div>
+            <div id="age-subtitle">Dieses Angebot richtet sich ausschließlich an Personen ab 18 Jahren.</div>
+            <div id="age-disclaimer">Glücksspiel kann süchtig machen. Spielen Sie verantwortungsbewusst.</div>
+            <div id="age-buttons">
+                <button id="btn-age-yes" onclick="confirmAge()">Ja, ich bin 18+</button>
+                <button id="btn-age-no" onclick="closeUI()">Nein, verlassen</button>
+            </div>
+            <div id="age-ornament-bot">♣ ♦ ♥ ♠</div>
+        </div>
+    </div>
+
+    <!-- ── TICKET-SCREEN ── -->
     <div id="screen-ticket">
-        <div id="ticket-card">
-            <div id="ticket-bg-img"></div>
-            <div id="ticket-inner">
+        <div id="casino-bg-particles"></div>
 
-                <div id="ticket-header">
-                    <span id="ticket-logo-mark">🎟 MTJ LOS</span>
-                    <span id="ticket-name-label"></span>
+        <div id="ticket-wrap">
+            <!-- Ticket Karte -->
+            <div id="ticket-card">
+                <div id="ticket-bg-img"></div>
+
+                <!-- Obere Zierleiste -->
+                <div id="ticket-deco-top">
+                    <span class="suit">♠</span>
+                    <span class="ticket-serial">MTJ-CASINO · LOS</span>
+                    <span class="suit">♠</span>
                 </div>
 
-                <div id="scratch-zone">
-                    <!-- Dekoratives Muster liegt UNTER dem Canvas -->
-                    <div id="scratch-under">
-                        <div class="scratch-stars">✦ ✦ ✦ ✦ ✦</div>
-                        <div class="scratch-cta-text">Hier Rubbeln!</div>
-                        <div class="scratch-stars">✦ ✦ ✦ ✦ ✦</div>
+                <!-- Ticket-Körper -->
+                <div id="ticket-body">
+                    <div id="ticket-name-label"></div>
+
+                    <!-- Rubbelfeld -->
+                    <div id="scratch-zone">
+                        <div id="scratch-under">
+                            <div class="scratch-deco-row">
+                                <span>✦</span><span>✦</span><span>✦</span><span>✦</span><span>✦</span>
+                            </div>
+                            <div id="scratch-cta">HIER RUBBELN</div>
+                            <div class="scratch-deco-row">
+                                <span>✦</span><span>✦</span><span>✦</span><span>✦</span><span>✦</span>
+                            </div>
+                        </div>
+                        <canvas id="scratch-canvas"></canvas>
                     </div>
-                    <!-- Rubbelschicht -->
-                    <canvas id="scratch-canvas"></canvas>
+
+                    <div id="ticket-hint">🖱 Klicken &amp; Ziehen zum Freirubbeln</div>
                 </div>
 
-                <div id="ticket-hint">🖱 Klicken &amp; Ziehen zum Aufrubbeln</div>
-
-                <div id="ticket-footer-row">
-                    <span id="ticket-footer-text">Viel Glück! • MTJ Server</span>
-                    <button id="btn-close-ticket" onclick="closeUI()">✖</button>
+                <!-- Untere Zierleiste -->
+                <div id="ticket-deco-bot">
+                    <span class="suit red">♥</span>
+                    <span id="ticket-footer-text">Viel Glück! • MTJ Casino</span>
+                    <span class="suit red">♥</span>
+                    <button id="btn-close-ticket" onclick="closeUI()" title="Schließen">✕</button>
                 </div>
+            </div>
 
+            <!-- FSK Badge -->
+            <div id="fsk-corner-badge">
+                <span>FSK</span>
+                <strong>18</strong>
             </div>
         </div>
     </div>
 
-    <!-- ══════════════════════════════════
-         WIN-SCREEN
-         ══════════════════════════════════ -->
+    <!-- ── WIN-SCREEN ── -->
     <div id="screen-win">
-        <div id="confetti-root"></div>
+        <div id="coin-rain"></div>
 
-        <div id="win-panel">
-            <div id="win-glow"></div>
+        <div id="win-card">
+            <div id="win-top-deco">♠ ♥ ♦ ♣</div>
+
+            <div id="win-jackpot-label">J A C K P O T</div>
 
             <div id="prize-visual">
+                <div id="prize-glow-ring"></div>
                 <img id="prize-img" src="" alt="" />
                 <span id="prize-icon-fallback">🏆</span>
             </div>
 
-            <div id="win-badge">🎉 GLÜCKWUNSCH! 🎉</div>
+            <div id="win-headline">🎉 GLÜCKWUNSCH! 🎉</div>
             <div id="win-prize-label"></div>
 
-            <button id="btn-collect" onclick="collectPrize()">✅ Einsammeln</button>
+            <div id="win-divider"><span>♦</span></div>
+
+            <button id="btn-collect" onclick="collectPrize()">
+                <span>✓</span> GEWINN EINSAMMELN
+            </button>
+
+            <div id="win-disclaimer">Spielen Sie verantwortungsbewusst · FSK 18</div>
         </div>
     </div>
 
-    <!-- ══════════════════════════════════
-         LOSE-SCREEN
-         ══════════════════════════════════ -->
+    <!-- ── LOSE-SCREEN ── -->
     <div id="screen-lose">
-        <div id="lose-panel">
-            <div id="lose-emoji">😔</div>
-            <div id="lose-headline">Leider nichts gewonnen</div>
+        <div id="lose-card">
+            <div id="lose-top-deco">♠ ♥ ♦ ♣</div>
+            <div id="lose-icon-wrap">
+                <div id="lose-broken-chip">🎰</div>
+            </div>
+            <div id="lose-headline">KEIN GEWINN</div>
             <div id="lose-subtext"></div>
-            <button id="btn-lose-ok" onclick="closeUI()">OK, nächstes Mal!</button>
+            <div id="lose-divider"><span>♦</span></div>
+            <button id="btn-lose-ok" onclick="closeUI()">WEITER SPIELEN</button>
+            <div id="lose-disclaimer">Spielen Sie verantwortungsbewusst · FSK 18</div>
         </div>
+    </div>
+
+    <!-- ── ADMIN-TABLET ── -->
+    <div id="screen-admin">
+        <div id="admin-tablet">
+
+            <div id="admin-header">
+                <div id="admin-header-left">
+                    <div id="admin-logo-box">🎟</div>
+                    <div>
+                        <div id="admin-title">MTJ Los — Admin Verwaltung</div>
+                        <div id="admin-subtitle">Datenbankbasiertes Lotterie-Management · FSK 18</div>
+                    </div>
+                </div>
+                <div id="admin-header-right">
+                    <div id="admin-fsk-badge">FSK<strong>18</strong></div>
+                    <div id="admin-role-badge">ADMIN</div>
+                    <button id="admin-close-btn" onclick="closeAdmin()">✕</button>
+                </div>
+            </div>
+
+            <div id="admin-body">
+                <div id="admin-sidebar">
+                    <button class="adm-tab active" data-tab="tickets" onclick="adminTab('tickets')">
+                        <span class="adm-tab-icon">📋</span>Los-Typen
+                    </button>
+                    <button class="adm-tab" data-tab="prizes" onclick="adminTab('prizes')">
+                        <span class="adm-tab-icon">🏆</span>Preise
+                    </button>
+                    <button class="adm-tab" data-tab="players" onclick="adminTab('players')">
+                        <span class="adm-tab-icon">👥</span>Spieler
+                    </button>
+                    <button class="adm-tab" data-tab="database" onclick="adminTab('database')">
+                        <span class="adm-tab-icon">🗄</span>Datenbank
+                    </button>
+                    <div class="adm-sep"></div>
+                    <button class="adm-tab" data-tab="stats" onclick="adminTab('stats')">
+                        <span class="adm-tab-icon">📊</span>Statistiken
+                    </button>
+                    <div id="admin-sidebar-version">v1.1.0 · MTJ Los</div>
+                </div>
+
+                <div id="admin-content">
+                    <!-- Wird per JS befüllt -->
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Modal -->
+        <div id="admin-modal" class="adm-hidden">
+            <div id="admin-modal-box">
+                <div id="admin-modal-header">
+                    <div id="admin-modal-title">Modal</div>
+                    <button onclick="closeModal()">✕</button>
+                </div>
+                <div id="admin-modal-body"></div>
+                <div id="admin-modal-footer">
+                    <button class="adm-btn-ghost" onclick="closeModal()">Abbrechen</button>
+                    <button class="adm-btn-primary" id="admin-modal-save" onclick="saveModal()">✓ Speichern</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast -->
+        <div id="admin-toast-container"></div>
     </div>
 
 </div>
 
 <script src="js/main.js"></script>
+<script src="js/admin.js"></script>
 </body>
 </html>
