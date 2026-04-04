@@ -12,6 +12,8 @@ const SCRATCH_THRESHOLD      = 0.48;
 const PROGRESS_CHECK_INTERVAL = 100;
 let scratchHandlers   = null;
 let ageConfirmed      = false;
+let resultReceived    = false;
+let resultTimeout     = null;
 
 /* ── pending ticket data (wartet auf Age-Gate) ── */
 let pendingTicket     = null;
@@ -73,8 +75,10 @@ function confirmAge() {
    TICKET UI
    ============================================================ */
 function openTicket(data) {
-    currentItem = data.itemName;
-    scratchDone = false;
+    currentItem    = data.itemName;
+    scratchDone    = false;
+    resultReceived = false;
+    if (resultTimeout) { clearTimeout(resultTimeout); resultTimeout = null; }
 
     /* Hintergrund */
     const bg = document.getElementById('ticket-bg-img');
@@ -231,7 +235,10 @@ function doScratch(e) {
     }
 }
 
-function stopScratch() { isScratching = false; }
+function stopScratch() {
+    isScratching = false;
+    if (!scratchDone) checkScratchProgress();
+}
 
 function erase(pos) {
     ctx.globalCompositeOperation = 'destination-out';
@@ -259,6 +266,14 @@ function checkScratchProgress() {
 
 function sendScratchEvent(retries) {
     const attempt = retries || 0;
+
+    /* Fallback: Kamera-Freeze verhindern wenn Server kein Result schickt */
+    if (attempt === 0) {
+        resultTimeout = setTimeout(() => {
+            if (!resultReceived) closeUI();
+        }, 10000);
+    }
+
     fetch(`https://${window.location.hostname}/scratchTicket`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -274,6 +289,8 @@ function sendScratchEvent(retries) {
    ERGEBNIS ANZEIGEN
    ============================================================ */
 function showResult(data) {
+    resultReceived = true;
+    if (resultTimeout) { clearTimeout(resultTimeout); resultTimeout = null; }
     hideAll();
     document.body.style.pointerEvents = 'auto';
 
@@ -355,6 +372,8 @@ function resetUI() {
     isScratching      = false;
     lastProgressCheck = 0;
     currentItem       = null;
+    resultReceived    = false;
+    if (resultTimeout) { clearTimeout(resultTimeout); resultTimeout = null; }
 
     removeScratchListeners();
 
