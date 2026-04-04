@@ -196,14 +196,16 @@ function checkScratchProgress() {
     }
 }
 
-function sendScratchEvent() {
+function sendScratchEvent(retries) {
+    const attempt = retries || 0;
     fetch(`https://${window.location.hostname}/scratchTicket`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ itemName: currentItem }),
     }).catch(() => {
-        // Fallback: erneut versuchen
-        setTimeout(sendScratchEvent, 500);
+        if (attempt < 3) {
+            setTimeout(() => sendScratchEvent(attempt + 1), 500);
+        }
     });
 }
 
