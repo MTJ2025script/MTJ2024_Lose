@@ -210,7 +210,7 @@ AddEventHandler('onServerResourceStart', function(resourceName)
         local cnt = (res and res[1] and res[1].cnt) or 0
         if cnt == 0 then
             seedFromConfig(function()
-                Citizen.Wait(500)
+                Wait(500)
                 loadLiveConfig(function()
                     registerAllUsableItems()
                     configReady = true
