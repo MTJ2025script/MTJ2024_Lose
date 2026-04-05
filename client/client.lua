@@ -49,11 +49,11 @@ AddEventHandler('mtj_los:client:openTicket', function(data)
 end)
 
 -- ============================================================
---  ERGEBNIS ANZEIGEN  (kommt jetzt über ESX.TriggerServerCallback direkt)
+--  ERGEBNIS ANZEIGEN
 -- ============================================================
-local function handlePrizeResult(prize, mySession)
+local function handlePrizeResult(prize)
+    if resultArrived then return end
     resultArrived = true
-    if focusSession ~= mySession then return end
 
     SendNUIMessage({
         action = 'showResult',
@@ -65,12 +65,20 @@ local function handlePrizeResult(prize, mySession)
     -- Phase 2: Spieler hat 30 s Zeit das Ergebnis zu lesen.
     Citizen.CreateThread(function()
         Citizen.Wait(30000)
-        if focusSession == mySession and nuiFocusActive then
+        if nuiFocusActive then
             releaseFocus()
             SendNUIMessage({ action = 'forceClose' })
         end
     end)
 end
+
+-- ============================================================
+--  SERVER → CLIENT: Ergebnis nach dem Kratzen
+-- ============================================================
+RegisterNetEvent('mtj_los:client:result')
+AddEventHandler('mtj_los:client:result', function(prize)
+    handlePrizeResult(prize)
+end)
 
 -- ============================================================
 --  FAHRZEUG SPAWNEN
@@ -114,28 +122,8 @@ end)
 --  NUI CALLBACKS – Spieler
 -- ============================================================
 RegisterNUICallback('scratchTicket', function(data, cb)
-    -- NUI-Fetch sofort freigeben (cb muss vor einem möglichen Yield aufgerufen werden)
     cb({ ok = true })
-
-    focusSession = focusSession + 1
-    local mySession = focusSession
-
-    -- Safety-Timer: Falls der ESX-Callback nie antwortet (Server-Fehler) → 15 s Notfall-Exit
-    Citizen.CreateThread(function()
-        Citizen.Wait(15000)
-        if focusSession == mySession and nuiFocusActive and not resultArrived then
-            releaseFocus()
-            SendNUIMessage({ action = 'forceClose' })
-        end
-    end)
-
-    -- Ergebnis per ESX Server Callback holen – zuverlässiger Request-Response
-    -- statt fire-and-forget TriggerServerEvent + TriggerClientEvent.
-    Citizen.CreateThread(function()
-        ESX.TriggerServerCallback('mtj_los:scratchCb', function(prize)
-            handlePrizeResult(prize, mySession)
-        end, data.itemName)
-    end)
+    TriggerServerEvent('mtj_los:server:scratch', data.itemName)
 end)
 
 RegisterNUICallback('closeUI', function(_, cb)
