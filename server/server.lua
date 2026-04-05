@@ -283,6 +283,21 @@ AddEventHandler('mtj_los:server:scratch', function(itemName)
 end)
 
 -- ============================================================
+--  EVENT: UI geschlossen ohne zu rubbeln (pending aufräumen)
+-- ============================================================
+RegisterNetEvent('mtj_los:server:cancelTicket')
+AddEventHandler('mtj_los:server:cancelTicket', function()
+    pendingScratches[source] = nil
+end)
+
+-- ============================================================
+--  CLEANUP: pendingScratches bei Disconnect bereinigen
+-- ============================================================
+AddEventHandler('playerDropped', function()
+    pendingScratches[source] = nil
+end)
+
+-- ============================================================
 --  HILFE: Alle Ticket-Daten für Admin serialisieren
 -- ============================================================
 local function serializeTickets()

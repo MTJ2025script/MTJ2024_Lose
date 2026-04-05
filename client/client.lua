@@ -76,6 +76,7 @@ end)
 
 RegisterNUICallback('closeUI', function(_, cb)
     SetNuiFocus(false, false)
+    TriggerServerEvent('mtj_los:server:cancelTicket')
     cb({ ok = true })
 end)
 
@@ -115,6 +116,7 @@ end, false)
 -- ============================================================
 RegisterCommand('losclose', function()
     SetNuiFocus(false, false)
+    TriggerServerEvent('mtj_los:server:cancelTicket')
     SendNUIMessage({ action = 'forceClose' })
 end, false)
 
