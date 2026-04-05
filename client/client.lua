@@ -29,10 +29,11 @@ AddEventHandler('mtj_los:client:openTicket', function(data)
     resultArrived  = false
     SetNuiFocus(true, true)
 
-    -- Phase 1: Falls der Server innerhalb von 12 s kein Result schickt
-    --          → Fokus zwangsweise freigeben (Kamera-Freeze-Schutz)
+    -- Phase 1: Falls der Spieler das Los nie aufrubbelt oder innerhalb von 90 s
+    --          kein Server-Result ankommt → Fokus zwangsweise freigeben.
+    --          90 s lassen genug Puffer für Age-Gate-Bestätigung + Server-Latenz.
     Citizen.CreateThread(function()
-        Citizen.Wait(12000)
+        Citizen.Wait(90000)
         if focusSession == mySession and nuiFocusActive and not resultArrived then
             releaseFocus()
             SendNUIMessage({ action = 'forceClose' })
@@ -115,6 +116,18 @@ end)
 --  NUI CALLBACKS – Spieler
 -- ============================================================
 RegisterNUICallback('scratchTicket', function(data, cb)
+    -- Alten Phase-1-Timer invalidieren und neuen 15s-Timer für Server-Antwort starten.
+    -- Der 90s-Timer seit Ticket-Öffnung läuft vielleicht schon seit der Age-Gate-
+    -- Bestätigung – nach dem Kratzen brauchen wir einen frischen Countdown.
+    focusSession = focusSession + 1
+    local mySession = focusSession
+    Citizen.CreateThread(function()
+        Citizen.Wait(15000)
+        if focusSession == mySession and nuiFocusActive and not resultArrived then
+            releaseFocus()
+            SendNUIMessage({ action = 'forceClose' })
+        end
+    end)
     TriggerServerEvent('mtj_los:server:scratch', data.itemName)
     cb({ ok = true })
 end)

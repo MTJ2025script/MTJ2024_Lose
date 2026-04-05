@@ -113,7 +113,10 @@ function handleOpenTicket(data) {
 
 /* ── Age-Gate bestätigen ── */
 function confirmAge() {
-    ageConfirmed  = true;
+    ageConfirmed = true;
+    /* Body explizit sichtbar machen – forceClose könnte ihn versteckt haben */
+    document.body.style.display       = 'block';
+    document.body.style.pointerEvents = 'auto';
     if (pendingTicket) {
         openTicket(pendingTicket);
         pendingTicket = null;
@@ -358,8 +361,13 @@ function sendScratchEvent(retries) {
 function showResult(data) {
     resultReceived = true;
     if (resultTimeout) { clearTimeout(resultTimeout); resultTimeout = null; }
-    hideAll();
+
+    /* Body immer sichtbar machen – er könnte durch einen vorherigen forceClose
+       auf display:none gesetzt worden sein, bevor das Ergebnis ankam. */
+    document.body.style.display       = 'block';
     document.body.style.pointerEvents = 'auto';
+
+    hideAll();
 
     debugLog('Result empfangen: win=' + data.win + ' label=' + data.label, 'ok');
 
