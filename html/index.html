@@ -40,47 +40,65 @@
         <div id="casino-bg-particles"></div>
 
         <div id="ticket-wrap">
-            <!-- Ticket Karte -->
             <div id="ticket-card">
                 <div id="ticket-bg-img"></div>
 
-                <!-- Obere Zierleiste -->
-                <div id="ticket-deco-top">
-                    <span class="suit">♠</span>
-                    <span class="ticket-serial">MTJ-CASINO · LOS</span>
-                    <span class="suit">♠</span>
+                <!-- Oberer Strip -->
+                <div id="ticket-top-strip">
+                    <span class="strip-suit">♠</span>
+                    <span class="strip-suit">♥</span>
+                    <span id="ticket-top-text">MTJ · CASINO · PREMIUM LOS · FSK 18</span>
+                    <span class="strip-suit">♦</span>
+                    <span class="strip-suit">♣</span>
+                    <span id="ticket-serial-display">SER: MTJ-0000-000000</span>
                 </div>
 
-                <!-- Ticket-Körper -->
-                <div id="ticket-body">
-                    <div id="ticket-name-label"></div>
+                <!-- Haupt-Bereich: Links | Perforation | Rechts -->
+                <div id="ticket-main">
 
-                    <!-- Rubbelfeld -->
-                    <div id="scratch-zone">
-                        <div id="scratch-under">
-                            <div class="scratch-deco-row">
-                                <span>✦</span><span>✦</span><span>✦</span><span>✦</span><span>✦</span>
-                            </div>
-                            <div id="scratch-cta">HIER RUBBELN</div>
-                            <div class="scratch-deco-row">
-                                <span>✦</span><span>✦</span><span>✦</span><span>✦</span><span>✦</span>
-                            </div>
+                    <!-- Linkes Panel: Logo / Preistabelle / Barcode -->
+                    <div id="ticket-panel-left">
+                        <div id="tkt-logo-wrap">
+                            <div id="tkt-crown">👑</div>
+                            <div id="tkt-brand-line1">MTJ</div>
+                            <div id="tkt-brand-line2">CASINO</div>
                         </div>
-                        <canvas id="scratch-canvas"></canvas>
+                        <div id="tkt-prize-list">
+                            <div class="tkt-prize-row"><span class="tkt-prize-rank">1.</span><span class="tkt-prize-val">50.000 $</span></div>
+                            <div class="tkt-prize-row"><span class="tkt-prize-rank">2.</span><span class="tkt-prize-val">10.000 $</span></div>
+                            <div class="tkt-prize-row"><span class="tkt-prize-rank">3.</span><span class="tkt-prize-val">5.000 $</span></div>
+                            <div class="tkt-prize-row"><span class="tkt-prize-rank">4.</span><span class="tkt-prize-val">1.000 $</span></div>
+                        </div>
+                        <div id="tkt-barcode">
+                            <div id="tkt-barcode-lines"></div>
+                            <div id="tkt-barcode-num">2 04821 93847 5</div>
+                        </div>
                     </div>
 
-                    <!-- Fortschrittsanzeige -->
-                    <div id="scratch-progress-wrap">
-                        <div id="scratch-progress-bar"></div>
+                    <!-- Perforationslinie -->
+                    <div id="ticket-perf-line">
+                        <div id="perf-notch-t"></div>
+                        <div id="perf-dashes"></div>
+                        <div id="perf-notch-b"></div>
+                        <span id="perf-scissors">✂</span>
                     </div>
 
-                    <div id="ticket-hint">🖱 Klicken &amp; Ziehen zum Freirubbeln</div>
+                    <!-- Rechtes Panel: Name + AUFREISSEN -->
+                    <div id="ticket-panel-right">
+                        <div id="tkt-name-label"></div>
+                        <div id="tkt-prize-hint">✦ Hauptgewinn bis zu 50.000 $ ✦</div>
+                        <button id="btn-tear" onclick="tearTicket()">
+                            <span id="btn-tear-icon">🎟</span>
+                            <span id="btn-tear-text">LOS AUFREISSEN</span>
+                        </button>
+                        <div id="tkt-age-note">Nur für Personen ab 18 Jahren · FSK 18</div>
+                    </div>
                 </div>
 
-                <!-- Untere Zierleiste -->
-                <div id="ticket-deco-bot">
+                <!-- Unterer Strip -->
+                <div id="ticket-bot-strip">
                     <span class="suit red">♥</span>
-                    <span id="ticket-footer-text">Viel Glück! • MTJ Casino</span>
+                    <span id="ticket-bot-text">Viel Glück! · MTJ Casino · Spielen Sie verantwortungsbewusst</span>
                     <span class="suit red">♥</span>
                     <button id="btn-close-ticket" onclick="closeUI()" title="Schließen">✕</button>
                 </div>
