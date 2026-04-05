@@ -43,6 +43,15 @@ body {
     pointer-events: auto;
 }
 
+/* ── VOLLBILD HINTERGRUNDBILD ── */
+#ui-bg {
+    position: fixed;
+    inset: 0;
+    background: url('../images/bg.jpg') center / cover no-repeat;
+    z-index: 0;
+    pointer-events: none;
+}
+
 /* ── SCREENS ── */
 #screen-agegate,
 #screen-ticket,
@@ -54,7 +63,8 @@ body {
     display: none;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.96);
+    background: rgba(0, 0, 0, 0.72);
+    z-index: 1;
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -62,7 +72,7 @@ body {
    ════════════════════════════════════════════════════════════ */
 #screen-agegate {
     background: radial-gradient(ellipse at center,
-        #1a0010 0%, #0a0005 60%, #000000 100%);
+        rgba(26,0,16,0.90) 0%, rgba(10,0,5,0.90) 60%, rgba(0,0,0,0.90) 100%);
 }
 
 #age-box {
