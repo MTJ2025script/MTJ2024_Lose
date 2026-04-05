@@ -69,6 +69,7 @@ window.addEventListener('message', (event) => {
     if (data.action === 'openTicket')    handleOpenTicket(data);
     if (data.action === 'showResult')    showResult(data);
     if (data.action === 'admin:open')    openAdmin(data);
+    if (data.action === 'admin:denied')  handleAdminDenied(data);
     if (data.action === 'forceClose')    forceClose();
     if (data.action === 'debug:toggle')  toggleDebug();
 });
@@ -77,6 +78,16 @@ function forceClose() {
     hideAll();
     resetUI();
     debugLog('forceClose ausgeführt (Notfall-Exit)', 'warn');
+}
+
+function handleAdminDenied(data) {
+    debugLog('Admin-Zugriff verweigert: ' + (data.message || 'Keine Berechtigung'), 'error');
+    /* Fokus über closeUI-Callback freigeben */
+    fetch(`https://${window.location.hostname}/admin:close`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({}),
+    }).catch(() => {});
 }
 
 function toggleDebug() {

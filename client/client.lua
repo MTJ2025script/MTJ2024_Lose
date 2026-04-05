@@ -4,9 +4,12 @@ local ESX = exports['es_extended']:getSharedObject()
 --  FOKUS-STATE
 --  nuiFocusActive  – true solange NUI den Fokus hält
 --  resultArrived   – true sobald der Server ein Result schickt
+--  focusSession    – Zähler: verhindert dass alte Phase-Timer
+--                    neue Ticket- oder Admin-Sessions stören
 -- ============================================================
 local nuiFocusActive = false
 local resultArrived  = false
+local focusSession   = 0
 
 local function releaseFocus()
     nuiFocusActive = false
@@ -19,6 +22,9 @@ end
 -- ============================================================
 RegisterNetEvent('mtj_los:client:openTicket')
 AddEventHandler('mtj_los:client:openTicket', function(data)
+    focusSession   = focusSession + 1
+    local mySession = focusSession
+
     nuiFocusActive = true
     resultArrived  = false
     SetNuiFocus(true, true)
@@ -27,7 +33,7 @@ AddEventHandler('mtj_los:client:openTicket', function(data)
     --          → Fokus zwangsweise freigeben (Kamera-Freeze-Schutz)
     Citizen.CreateThread(function()
         Citizen.Wait(12000)
-        if nuiFocusActive and not resultArrived then
+        if focusSession == mySession and nuiFocusActive and not resultArrived then
             releaseFocus()
             SendNUIMessage({ action = 'forceClose' })
         end
@@ -57,9 +63,10 @@ AddEventHandler('mtj_los:client:result', function(prize)
 
     -- Phase 2: Spieler hat 30 s Zeit das Ergebnis zu lesen.
     --          Danach Fokus zwangsweise freigeben (Kamera-Freeze-Schutz).
+    local mySession = focusSession
     Citizen.CreateThread(function()
         Citizen.Wait(30000)
-        if nuiFocusActive then
+        if focusSession == mySession and nuiFocusActive then
             releaseFocus()
             SendNUIMessage({ action = 'forceClose' })
         end
@@ -137,7 +144,7 @@ for _, cbName in ipairs(adminCbs) do
 end
 
 RegisterNUICallback('admin:close', function(_, cb)
-    SetNuiFocus(false, false)
+    releaseFocus()
     cb({ ok = true })
 end)
 
@@ -145,6 +152,10 @@ end)
 --  ADMIN BEFEHL (/losadmin)
 -- ============================================================
 RegisterCommand(Config.AdminCommand or 'losadmin', function()
+    -- Fokus-State setzen damit F10 und Safety-Mechanismen greifen
+    focusSession   = focusSession + 1
+    nuiFocusActive = true
+    resultArrived  = true   -- verhindert dass ein laufender Ticket-Phase-1-Timer feuert
     SetNuiFocus(true, true)
     TriggerServerEvent('mtj_los:admin:open')
 end, false)

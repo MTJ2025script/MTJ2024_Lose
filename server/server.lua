@@ -13,6 +13,11 @@ local configReady    = false
 --  HELFER: Admin-Berechtigung prüfen
 -- ============================================================
 local function isAdmin(src)
+    -- Methode 1: spezifische ACE-Permission (mtj_los.admin)
+    if IsPlayerAceAllowed(src, 'mtj_los.admin') then return true end
+    -- Methode 2: allgemeine Admin-ACE (FiveM-Standard für ESX-Server)
+    if IsPlayerAceAllowed(src, 'command') then return true end
+    -- Methode 3: ESX-Gruppe als Fallback
     local xPlayer = ESX.GetPlayerFromId(src)
     if not xPlayer then return false end
     local group = xPlayer.getGroup()
@@ -364,7 +369,15 @@ end
 RegisterNetEvent('mtj_los:admin:open')
 AddEventHandler('mtj_los:admin:open', function()
     local src = source
-    if not isAdmin(src) then return end
+    if not isAdmin(src) then
+        -- NUI zurückschicken damit der Client den Fokus freigibt
+        TriggerClientEvent('mtj_los:admin:sendData', src, {
+            action  = 'admin:denied',
+            message = 'Keine Admin-Berechtigung.',
+        })
+        print(('[MTJ Los] Admin-Zugriff verweigert für Spieler %s'):format(src))
+        return
+    end
     TriggerClientEvent('mtj_los:admin:sendData', src, {
         action  = 'admin:open',
         tickets = serializeTickets(),
