@@ -193,7 +193,7 @@ function initScratchCanvas() {
 
     const zone = document.getElementById('scratch-zone');
     canvas = document.getElementById('scratch-canvas');
-    ctx    = canvas.getContext('2d');
+    ctx    = canvas.getContext('2d', { willReadFrequently: true });
 
     const w = zone.offsetWidth  || 400;
     const h = zone.offsetHeight || 110;
@@ -308,6 +308,16 @@ function erase(pos) {
     ctx.globalCompositeOperation = 'source-over';
 }
 
+/* ── Fortschrittsbalken ── */
+function updateProgressBar(pct) {
+    const bar = document.getElementById('scratch-progress-bar');
+    if (!bar) return;
+    bar.style.width = Math.min(pct * 100, 100) + '%';
+    bar.style.background = pct >= SCRATCH_THRESHOLD
+        ? 'linear-gradient(90deg,#22c55e,#4ade80)'
+        : 'linear-gradient(90deg,#c9a84c,#f5d060)';
+}
+
 /* ── Scratch-Prozent berechnen ── */
 function getScratchPercent() {
     if (!canvas || !ctx || !canvas.width || !canvas.height) return 0;
@@ -329,6 +339,7 @@ function checkScratchProgress() {
 
     const pct = getScratchPercent();
     updateDebugPanel(pct);
+    updateProgressBar(pct);
 
     if (pct >= SCRATCH_THRESHOLD) {
         scratchDone = true;
@@ -445,19 +456,18 @@ function collectPrize() { closeUI(); }
 function closeUI() {
     hideAll();
     resetUI();
+    sendCloseCallback(0);
+}
+
+function sendCloseCallback(attempt) {
     fetch(`https://${window.location.hostname}/closeUI`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({}),
     }).catch(() => {
-        /* Retry – Focus MUSS freigegeben werden */
-        setTimeout(() => {
-            fetch(`https://${window.location.hostname}/closeUI`, {
-                method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify({}),
-            }).catch(() => {});
-        }, 500);
+        if (attempt < 5) {
+            setTimeout(() => sendCloseCallback(attempt + 1), 300);
+        }
     });
 }
 
@@ -470,6 +480,7 @@ function resetUI() {
     if (resultTimeout) { clearTimeout(resultTimeout); resultTimeout = null; }
 
     removeScratchListeners();
+    updateProgressBar(0);
 
     const coinRain = document.getElementById('coin-rain');
     if (coinRain) coinRain.innerHTML = '';

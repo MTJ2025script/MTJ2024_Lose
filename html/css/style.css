@@ -381,6 +381,24 @@ body {
     touch-action: none;
 }
 
+/* ── Fortschrittsbalken ── */
+#scratch-progress-wrap {
+    width: 400px;
+    height: 6px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 3px;
+    overflow: hidden;
+    border: 1px solid rgba(201,168,76,0.15);
+}
+
+#scratch-progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #c9a84c, #f5d060);
+    border-radius: 3px;
+    transition: width 0.1s ease, background 0.3s ease;
+}
+
 #ticket-hint {
     font-size: 11px;
     color: rgba(201,168,76,.45);
