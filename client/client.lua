@@ -4,9 +4,27 @@ local ESX = exports['es_extended']:getSharedObject()
 --  TICKET ÖFFNEN
 --  Server sendet table { itemName, label, ticketBg }
 -- ============================================================
+local nuiSafetyTimer = false   -- guards against stuck NUI focus
+
 RegisterNetEvent('mtj_los:client:openTicket')
 AddEventHandler('mtj_los:client:openTicket', function(data)
-    SetNuiFocus(true, true)    -- Maus + NUI-Focus → Spieler kann rubbeln und klicken
+    SetNuiFocus(true, true)
+    nuiSafetyTimer = true
+
+    -- Safety thread: release focus after 25 s if NUI never calls closeUI
+    Citizen.CreateThread(function()
+        local waited = 0
+        while nuiSafetyTimer and waited < 25 do
+            Citizen.Wait(1000)
+            waited = waited + 1
+        end
+        if nuiSafetyTimer then
+            nuiSafetyTimer = false
+            SetNuiFocus(false, false)
+            SendNUIMessage({ action = 'forceClose' })
+        end
+    end)
+
     SendNUIMessage({
         action   = 'openTicket',
         itemName = data.itemName or data,
@@ -75,6 +93,7 @@ RegisterNUICallback('scratchTicket', function(data, cb)
 end)
 
 RegisterNUICallback('closeUI', function(_, cb)
+    nuiSafetyTimer = false
     SetNuiFocus(false, false)
     TriggerServerEvent('mtj_los:server:cancelTicket')
     cb({ ok = true })
@@ -115,6 +134,7 @@ end, false)
 --  NOTFALL-EXIT: Kamera-Freeze beheben (/losclose oder F10)
 -- ============================================================
 RegisterCommand('losclose', function()
+    nuiSafetyTimer = false
     SetNuiFocus(false, false)
     TriggerServerEvent('mtj_los:server:cancelTicket')
     SendNUIMessage({ action = 'forceClose' })

@@ -169,6 +169,22 @@ function spawnBgSuits() {
 /* ============================================================
    LOS AUFREISSEN
    ============================================================ */
+
+/* CSS-Keyframes einmalig injizieren (FiveM CEF-safe, kein element.animate()) */
+(function injectTearStyles() {
+    if (document.getElementById('tear-keyframes')) return;
+    const s = document.createElement('style');
+    s.id = 'tear-keyframes';
+    s.textContent = [
+        '@keyframes particleFly{',
+        '0%{transform:translate(var(--tx0),var(--ty0)) scale(1);opacity:1}',
+        '100%{transform:translate(var(--tx1),var(--ty1)) scale(0);opacity:0}',
+        '}',
+        '.tear-particle-anim{animation:particleFly var(--dur) cubic-bezier(.17,.67,.4,1) forwards}',
+    ].join('');
+    document.head.appendChild(s);
+})();
+
 function tearTicket() {
     if (scratchDone) return;
     scratchDone = true;
@@ -177,6 +193,9 @@ function tearTicket() {
     if (btn) { btn.disabled = true; }
 
     debugLog('Los wird aufgerissen: ' + currentItem, 'info');
+
+    /* Server-Event SOFORT senden – maximale Zeit für den Server */
+    sendScratchEvent(0);
 
     const card = document.getElementById('ticket-card');
     const wrap = document.getElementById('ticket-wrap');
@@ -194,11 +213,11 @@ function tearTicket() {
         setTimeout(() => { if (flash.parentNode) flash.remove(); }, 450);
 
         /* Phase 3 – Ticket in zwei Hälften spalten */
-        const rect    = card.getBoundingClientRect();
+        const rect     = card.getBoundingClientRect();
         const wrapRect = wrap.getBoundingClientRect();
         const offsetTop = rect.top - wrapRect.top;
-        const halfH   = Math.round(rect.height / 2);
-        const w       = rect.width;
+        const halfH    = Math.round(rect.height / 2);
+        const w        = rect.width;
 
         function makePiece(clipTop) {
             const div = document.createElement('div');
@@ -213,7 +232,6 @@ function tearTicket() {
                 'overflow:hidden',
                 'z-index:50',
                 'pointer-events:none',
-                'will-change:transform,opacity',
                 'border-radius:' + (clipTop ? '22px 22px 0 0' : '0 0 22px 22px'),
             ].join(';');
             const clone = card.cloneNode(true);
@@ -238,38 +256,35 @@ function tearTicket() {
         wrap.appendChild(topDiv);
         wrap.appendChild(botDiv);
 
-        /* Partikel-Explosion am Riss */
+        /* Partikel */
         spawnTearParticles(wrap, offsetTop + halfH, w);
 
-        /* Hälften animieren */
+        /* Hälften animieren – CSS transition, kein element.animate() */
         requestAnimationFrame(() => {
-            topDiv.style.transition = 'transform .80s cubic-bezier(.55,.06,.68,.19), opacity .80s ease';
-            topDiv.style.transform  = 'translateY(-240px) translateX(-30px) rotate(-16deg) scale(.88)';
+            topDiv.style.transition = 'transform .85s cubic-bezier(.55,.06,.68,.19), opacity .85s ease';
+            topDiv.style.transform  = 'translateY(-230px) translateX(-28px) rotate(-15deg) scale(.88)';
             topDiv.style.opacity    = '0';
 
-            botDiv.style.transition = 'transform .80s cubic-bezier(.55,.06,.68,.19), opacity .80s ease';
-            botDiv.style.transform  = 'translateY(240px) translateX(30px) rotate(12deg) scale(.88)';
+            botDiv.style.transition = 'transform .85s cubic-bezier(.55,.06,.68,.19), opacity .85s ease';
+            botDiv.style.transform  = 'translateY(230px) translateX(28px) rotate(12deg) scale(.88)';
             botDiv.style.opacity    = '0';
         });
 
-        /* Server-Event senden */
-        setTimeout(() => sendScratchEvent(0), 380);
-
-    }, 450);
+    }, 440);
 }
 
 function spawnTearParticles(parent, tearY, ticketW) {
     const colors = ['#f5d060','#ffe566','#c9a84c','#ffffff','#ff6b35','#ff4040','#aa00ff','#00c8ff'];
-    for (let i = 0; i < 80; i++) {
+    for (let i = 0; i < 25; i++) {
         const p     = document.createElement('div');
-        p.className = 'tear-particle';
         const angle  = Math.random() * Math.PI * 2;
-        const speed  = 70 + Math.random() * 210;
-        const size   = 3 + Math.random() * 7;
+        const speed  = 80 + Math.random() * 180;
+        const size   = 4 + Math.random() * 7;
         const color  = colors[Math.floor(Math.random() * colors.length)];
         const startX = ticketW * 0.2 + Math.random() * ticketW * 0.6;
-        const dur    = 500 + Math.random() * 750;
-        const shape  = Math.random() > 0.45 ? '50%' : (2 + Math.random() * 3) + 'px';
+        const dur    = Math.round(500 + Math.random() * 600);
+        const tx1    = Math.round(Math.cos(angle) * speed);
+        const ty1    = Math.round(Math.sin(angle) * speed - 30);
 
         p.style.cssText = [
             'position:absolute',
@@ -277,24 +292,22 @@ function spawnTearParticles(parent, tearY, ticketW) {
             'top:'    + tearY  + 'px',
             'width:'  + size   + 'px',
             'height:' + size   + 'px',
-            'border-radius:' + shape,
+            'border-radius:' + (Math.random() > 0.45 ? '50%' : '3px'),
             'background:'    + color,
             'box-shadow:0 0 ' + (size * 2) + 'px ' + color,
             'pointer-events:none',
             'z-index:60',
-            'opacity:1',
+            '--tx0:0px', '--ty0:0px',
+            '--tx1:' + tx1 + 'px',
+            '--ty1:' + ty1 + 'px',
+            '--dur:' + dur + 'ms',
         ].join(';');
+        p.className = 'tear-particle-anim';
 
         parent.appendChild(p);
 
-        const tx = Math.cos(angle) * speed;
-        const ty = Math.sin(angle) * speed - 30;
-
-        const anim = p.animate([
-            { transform: 'translate(0,0) scale(1)', opacity: 1 },
-            { transform: 'translate(' + tx + 'px,' + ty + 'px) scale(0)', opacity: 0 },
-        ], { duration: dur, easing: 'cubic-bezier(.17,.67,.4,1)', fill: 'forwards' });
-        anim.onfinish = () => { if (p.parentNode) p.remove(); };
+        /* cleanup via transitionend-equivalent: just timeout */
+        setTimeout(() => { if (p.parentNode) p.remove(); }, dur + 50);
     }
 }
 

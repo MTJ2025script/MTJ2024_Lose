@@ -239,7 +239,10 @@ RegisterNetEvent('mtj_los:server:scratch')
 AddEventHandler('mtj_los:server:scratch', function(itemName)
     local src     = source
     local xPlayer = ESX.GetPlayerFromId(src)
-    if not xPlayer then return end
+    if not xPlayer then
+        TriggerClientEvent('mtj_los:client:result', src, { type = 'nothing', label = 'Spieler nicht gefunden' })
+        return
+    end
 
     if pendingScratches[src] ~= itemName then
         TriggerClientEvent('mtj_los:client:result', src, { type = 'nothing', label = 'Kein gültiges Los' })
