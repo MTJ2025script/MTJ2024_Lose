@@ -245,30 +245,36 @@ AddEventHandler('mtj_los:server:scratch', function(itemName)
     local src = source
     print(('[MTJ Los] scratch event empfangen von src=%s item=%s'):format(tostring(src), tostring(itemName)))
 
+    local function dbg(msg)
+        print('[MTJ Los] ' .. tostring(msg))
+        TriggerClientEvent('mtj_los:client:serverDebug', src, tostring(msg))
+    end
+
     local function sendResult(prize)
         TriggerClientEvent('mtj_los:client:result', src, prize)
     end
 
     local ok, err = xpcall(function()
 
+        dbg('SERVER: event empfangen – src=' .. tostring(src) .. ' item=' .. tostring(itemName))
+
         local xPlayer = ESX.GetPlayerFromId(src)
         if not xPlayer then
-            print(('[MTJ Los] WARNUNG: xPlayer nil für src=%s – sende Niete'):format(tostring(src)))
+            dbg('SERVER FEHLER: xPlayer nil!')
             sendResult({ type = 'nothing', label = 'Spieler nicht gefunden' })
             return
         end
 
         if not configReady then
-            print('[MTJ Los] WARNUNG: configReady=false – sende Niete')
+            dbg('SERVER FEHLER: configReady=false')
             sendResult({ type = 'nothing', label = 'Server lädt noch' })
             return
         end
 
-        print(('[MTJ Los] pendingScratches[%s]=%s'):format(tostring(src), tostring(pendingScratches[src])))
+        dbg('SERVER: pendingScratches[' .. tostring(src) .. ']=' .. tostring(pendingScratches[src]))
 
         if pendingScratches[src] ~= itemName then
-            print(('[MTJ Los] WARNUNG: pending mismatch – erwartet=%s bekommen=%s'):format(
-                tostring(pendingScratches[src]), tostring(itemName)))
+            dbg('SERVER FEHLER: pending mismatch! erwartet=' .. tostring(pendingScratches[src]) .. ' bekommen=' .. tostring(itemName))
             sendResult({ type = 'nothing', label = 'Kein gültiges Los' })
             return
         end
@@ -276,20 +282,21 @@ AddEventHandler('mtj_los:server:scratch', function(itemName)
 
         local ticketCfg = getTicketConfig(itemName)
         if not ticketCfg then
-            print(('[MTJ Los] WARNUNG: kein TicketConfig für "%s"'):format(tostring(itemName)))
+            dbg('SERVER FEHLER: kein TicketConfig für ' .. tostring(itemName))
             sendResult({ type = 'nothing', label = 'Ungültiges Los' })
             return
         end
 
         local prize = rollPrize(ticketCfg.prizes)
         if not prize then
-            print('[MTJ Los] WARNUNG: rollPrize nil')
+            dbg('SERVER FEHLER: rollPrize nil')
             sendResult({ type = 'nothing', label = 'Kein Preis verfügbar' })
             return
         end
 
-        print(('[MTJ Los] Preis: type=%s label=%s'):format(tostring(prize.type), tostring(prize.label)))
+        dbg('SERVER: Preis ermittelt type=' .. tostring(prize.type) .. ' label=' .. tostring(prize.label))
         sendResult(prize)
+        dbg('SERVER: result gesendet')
 
         -- Preis vergeben + DB in eigenem Thread
         Citizen.CreateThread(function()
@@ -337,6 +344,7 @@ AddEventHandler('mtj_los:server:scratch', function(itemName)
 
     if not ok then
         print(('[MTJ Los] KRITISCHER FEHLER scratch handler: %s'):format(tostring(err)))
+        TriggerClientEvent('mtj_los:client:serverDebug', src, 'SERVER KRITISCHER FEHLER: ' .. tostring(err))
         TriggerClientEvent('mtj_los:client:result', src, { type = 'nothing', label = 'Server-Fehler' })
     end
 end)

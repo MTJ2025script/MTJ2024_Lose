@@ -75,6 +75,14 @@ local function handlePrizeResult(prize)
 end
 
 -- ============================================================
+--  SERVER → CLIENT: Debug-Nachrichten ans NUI weiterleiten
+-- ============================================================
+RegisterNetEvent('mtj_los:client:serverDebug')
+AddEventHandler('mtj_los:client:serverDebug', function(msg)
+    SendNUIMessage({ action = 'debug:serverMsg', msg = tostring(msg) })
+end)
+
+-- ============================================================
 --  SERVER → CLIENT: Ergebnis nach dem Kratzen
 -- ============================================================
 RegisterNetEvent('mtj_los:client:result')
@@ -124,8 +132,11 @@ end)
 --  NUI CALLBACKS – Spieler
 -- ============================================================
 RegisterNUICallback('scratchTicket', function(data, cb)
+    -- TriggerServerEvent MUSS vor cb() stehen – in manchen FiveM-Builds
+    -- wird der Callback-Kontext nach cb() beendet und nachfolgender Code
+    -- wird nicht mehr ausgeführt.
+    TriggerServerEvent('mtj_los:server:scratch', tostring(data.itemName or ''))
     cb({ ok = true })
-    TriggerServerEvent('mtj_los:server:scratch', data.itemName)
 end)
 
 RegisterNUICallback('closeUI', function(_, cb)

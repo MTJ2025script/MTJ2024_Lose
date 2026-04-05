@@ -72,6 +72,7 @@ window.addEventListener('message', (event) => {
     if (data.action === 'admin:denied')  handleAdminDenied(data);
     if (data.action === 'forceClose')    forceClose();
     if (data.action === 'debug:toggle')  toggleDebug();
+    if (data.action === 'debug:serverMsg') debugLog('[SRV] ' + data.msg, 'warn');
 });
 
 function forceClose() {
