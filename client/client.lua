@@ -55,6 +55,8 @@ local function handlePrizeResult(prize)
     if resultArrived then return end
     resultArrived = true
 
+    prize = prize or { type = 'nothing', label = '' }
+
     SendNUIMessage({
         action = 'showResult',
         win    = prize.type ~= 'nothing',
