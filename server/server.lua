@@ -242,85 +242,121 @@ end)
 -- ============================================================
 RegisterNetEvent('mtj_los:server:scratch')
 AddEventHandler('mtj_los:server:scratch', function(itemName)
-    local src     = source
-    local xPlayer = ESX.GetPlayerFromId(src)
-    if not xPlayer then
-        TriggerClientEvent('mtj_los:client:result', src, { type = 'nothing', label = 'Spieler nicht gefunden' })
-        return
+    local src        = source
+    local resultSent = false
+
+    -- Garantiert dass TriggerClientEvent genau EINMAL gefeuert wird,
+    -- egal an welcher Stelle der Handler endet (normal oder per Fehler).
+    local function sendResult(prize)
+        if resultSent then return end
+        resultSent = true
+        TriggerClientEvent('mtj_los:client:result', src, prize)
     end
 
-    if not configReady then
-        TriggerClientEvent('mtj_los:client:result', src, { type = 'nothing', label = 'Server lädt noch – bitte kurz warten' })
-        return
-    end
+    -- xpcall fängt JEDEN unerwarteten Lua-Fehler ab.
+    -- Ohne xpcall stirbt der Handler silent → Client bleibt ewig eingefroren.
+    local ok, err = xpcall(function()
 
-    if pendingScratches[src] ~= itemName then
-        TriggerClientEvent('mtj_los:client:result', src, { type = 'nothing', label = 'Kein gültiges Los' })
-        return
-    end
-    pendingScratches[src] = nil
-
-    local ticketCfg = getTicketConfig(itemName)
-    if not ticketCfg then
-        TriggerClientEvent('mtj_los:client:result', src, { type = 'nothing', label = 'Ungültiges Los' })
-        return
-    end
-
-    local prize = rollPrize(ticketCfg.prizes)
-    if not prize then
-        TriggerClientEvent('mtj_los:client:result', src, { type = 'nothing', label = 'Kein Preis verfügbar' })
-        return
-    end
-
-    local identifier = xPlayer.getIdentifier()
-    local playerName = xPlayer.getName()
-
-    print(('[MTJ Los] %s (%s) rollt Preis: type=%s label=%s'):format(playerName, src, prize.type, prize.label))
-
-    -- Preis vergeben (pcall schützt vor silent crashes)
-    local prizeOk, prizeErr = pcall(function()
-        if prize.type == 'money' then
-            xPlayer.addMoney(prize.amount or 0)
-        elseif prize.type == 'item' then
-            if prize.item and prize.item ~= '' then
-                addPlayerItem(src, xPlayer, prize.item, prize.amount or 1)
-            else
-                print('[MTJ Los] WARNUNG: Preis-Typ "item" hat leeren item-Namen – Preis übersprungen')
-            end
-        elseif prize.type == 'weapon' then
-            if prize.weapon and prize.weapon ~= '' then
-                addPlayerWeapon(src, xPlayer, prize.weapon, prize.ammo or 0)
-            else
-                print('[MTJ Los] WARNUNG: Preis-Typ "weapon" hat leeren weapon-Namen – Preis übersprungen')
-            end
-        elseif prize.type == 'car' then
-            if prize.model and prize.model ~= '' then
-                TriggerClientEvent('mtj_los:client:spawnCar', src, prize.model, prize.label)
-            else
-                print('[MTJ Los] WARNUNG: Preis-Typ "car" hat leeren model-Namen – Preis übersprungen')
-            end
+        local xPlayer = ESX.GetPlayerFromId(src)
+        if not xPlayer then
+            print(('[MTJ Los] WARNUNG: Spieler %s nicht gefunden beim Kratzen'):format(src))
+            sendResult({ type = 'nothing', label = 'Spieler nicht gefunden' })
+            return
         end
+
+        if not configReady then
+            print('[MTJ Los] WARNUNG: Config noch nicht bereit beim Kratzen')
+            sendResult({ type = 'nothing', label = 'Server lädt noch – bitte kurz warten' })
+            return
+        end
+
+        if pendingScratches[src] ~= itemName then
+            print(('[MTJ Los] WARNUNG: Kein pending scratch für %s (erwartet: %s, bekommen: %s)'):format(
+                src, tostring(pendingScratches[src]), tostring(itemName)))
+            sendResult({ type = 'nothing', label = 'Kein gültiges Los' })
+            return
+        end
+        pendingScratches[src] = nil
+
+        local ticketCfg = getTicketConfig(itemName)
+        if not ticketCfg then
+            print(('[MTJ Los] WARNUNG: Kein TicketConfig für Item "%s"'):format(tostring(itemName)))
+            sendResult({ type = 'nothing', label = 'Ungültiges Los' })
+            return
+        end
+
+        local prize = rollPrize(ticketCfg.prizes)
+        if not prize then
+            print('[MTJ Los] WARNUNG: rollPrize hat nil zurückgegeben')
+            sendResult({ type = 'nothing', label = 'Kein Preis verfügbar' })
+            return
+        end
+
+        print(('[MTJ Los] Spieler %s kratzt %s → rollt Preis: type=%s label=%s'):format(
+            src, itemName, tostring(prize.type), tostring(prize.label)))
+
+        -- Preis vergeben (pcall schützt vor ESX/ox-Inventory-Fehlern)
+        local prizeOk, prizeErr = pcall(function()
+            if prize.type == 'money' then
+                xPlayer.addMoney(prize.amount or 0)
+            elseif prize.type == 'item' then
+                if prize.item and prize.item ~= '' then
+                    addPlayerItem(src, xPlayer, prize.item, prize.amount or 1)
+                else
+                    print('[MTJ Los] WARNUNG: Preis-Typ "item" hat leeren item-Namen – Preis übersprungen')
+                end
+            elseif prize.type == 'weapon' then
+                if prize.weapon and prize.weapon ~= '' then
+                    addPlayerWeapon(src, xPlayer, prize.weapon, prize.ammo or 0)
+                else
+                    print('[MTJ Los] WARNUNG: Preis-Typ "weapon" hat leeren weapon-Namen – Preis übersprungen')
+                end
+            elseif prize.type == 'car' then
+                if prize.model and prize.model ~= '' then
+                    TriggerClientEvent('mtj_los:client:spawnCar', src, prize.model, prize.label)
+                else
+                    print('[MTJ Los] WARNUNG: Preis-Typ "car" hat leeren model-Namen – Preis übersprungen')
+                end
+            end
+        end)
+
+        if not prizeOk then
+            print(('[MTJ Los] FEHLER beim Preis vergeben: %s'):format(tostring(prizeErr)))
+        end
+
+        -- Ergebnis an Client – VOR dem DB-Insert und VOR getIdentifier/getName,
+        -- damit ESX-Methoden-Fehler den Client nie einfrieren.
+        sendResult(prize)
+
+        -- Identifier und Name nur für DB-Insert – in eigenem pcall gesichert.
+        local identifier = tostring(src)
+        local playerName = tostring(src)
+        pcall(function()
+            identifier = xPlayer.getIdentifier()
+            playerName = xPlayer.getName()
+        end)
+
+        print(('[MTJ Los] %s (%s) → %s → %s'):format(playerName, src, ticketCfg.label, tostring(prize.label)))
+
+        -- Verlauf asynchron speichern (Fehler hier blockieren das Gameplay nicht)
+        local dbOk, dbErr = pcall(function()
+            exports['oxmysql']:insert(
+                'INSERT INTO mtj_los_history (player_identifier, player_name, ticket_item, prize_type, prize_label) VALUES (?, ?, ?, ?, ?)',
+                { identifier, playerName, itemName, prize.type, prize.label },
+                function() end
+            )
+        end)
+        if not dbOk then
+            print(('[MTJ Los] WARNUNG: DB-Insert fehlgeschlagen: %s'):format(tostring(dbErr)))
+        end
+
+    end, function(e)
+        return tostring(e) .. '\n' .. debug.traceback('', 2)
     end)
 
-    if not prizeOk then
-        print(('[MTJ Los] FEHLER beim Preis vergeben: %s'):format(tostring(prizeErr)))
-    end
-
-    -- Ergebnis sofort an Client senden – MUSS vor dem DB-Insert stehen,
-    -- damit ein oxmysql-Fehler den Client nie im Freeze lässt.
-    TriggerClientEvent('mtj_los:client:result', src, prize)
-    print(('[MTJ Los] %s (%s) → %s → %s'):format(playerName, src, ticketCfg.label, prize.label))
-
-    -- Verlauf asynchron speichern (Fehler hier blockieren das Gameplay nicht)
-    local dbOk, dbErr = pcall(function()
-        exports['oxmysql']:insert(
-            'INSERT INTO mtj_los_history (player_identifier, player_name, ticket_item, prize_type, prize_label) VALUES (?, ?, ?, ?, ?)',
-            { identifier, playerName, itemName, prize.type, prize.label },
-            function() end
-        )
-    end)
-    if not dbOk then
-        print(('[MTJ Los] WARNUNG: DB-Insert fehlgeschlagen (Gameplay nicht betroffen): %s'):format(tostring(dbErr)))
+    if not ok then
+        print(('[MTJ Los] KRITISCHER FEHLER im scratch-Handler für Spieler %s:\n%s'):format(src, tostring(err)))
+        sendResult({ type = 'nothing', label = 'Interner Server-Fehler' })
     end
 end)
 
