@@ -49,11 +49,11 @@ AddEventHandler('mtj_los:client:openTicket', function(data)
 end)
 
 -- ============================================================
---  ERGEBNIS ANZEIGEN
+--  ERGEBNIS ANZEIGEN  (kommt jetzt über ESX.TriggerServerCallback direkt)
 -- ============================================================
-RegisterNetEvent('mtj_los:client:result')
-AddEventHandler('mtj_los:client:result', function(prize)
-    resultArrived = true   -- Phase-1-Timer wird damit inaktiv
+local function handlePrizeResult(prize, mySession)
+    resultArrived = true
+    if focusSession ~= mySession then return end
 
     SendNUIMessage({
         action = 'showResult',
@@ -63,8 +63,6 @@ AddEventHandler('mtj_los:client:result', function(prize)
     })
 
     -- Phase 2: Spieler hat 30 s Zeit das Ergebnis zu lesen.
-    --          Danach Fokus zwangsweise freigeben (Kamera-Freeze-Schutz).
-    local mySession = focusSession
     Citizen.CreateThread(function()
         Citizen.Wait(30000)
         if focusSession == mySession and nuiFocusActive then
@@ -72,7 +70,7 @@ AddEventHandler('mtj_los:client:result', function(prize)
             SendNUIMessage({ action = 'forceClose' })
         end
     end)
-end)
+end
 
 -- ============================================================
 --  FAHRZEUG SPAWNEN
@@ -116,11 +114,13 @@ end)
 --  NUI CALLBACKS – Spieler
 -- ============================================================
 RegisterNUICallback('scratchTicket', function(data, cb)
-    -- Alten Phase-1-Timer invalidieren und neuen 15s-Timer für Server-Antwort starten.
-    -- Der 90s-Timer seit Ticket-Öffnung läuft vielleicht schon seit der Age-Gate-
-    -- Bestätigung – nach dem Kratzen brauchen wir einen frischen Countdown.
+    -- NUI-Fetch sofort freigeben (cb muss vor einem möglichen Yield aufgerufen werden)
+    cb({ ok = true })
+
     focusSession = focusSession + 1
     local mySession = focusSession
+
+    -- Safety-Timer: Falls der ESX-Callback nie antwortet (Server-Fehler) → 15 s Notfall-Exit
     Citizen.CreateThread(function()
         Citizen.Wait(15000)
         if focusSession == mySession and nuiFocusActive and not resultArrived then
@@ -128,8 +128,14 @@ RegisterNUICallback('scratchTicket', function(data, cb)
             SendNUIMessage({ action = 'forceClose' })
         end
     end)
-    TriggerServerEvent('mtj_los:server:scratch', data.itemName)
-    cb({ ok = true })
+
+    -- Ergebnis per ESX Server Callback holen – zuverlässiger Request-Response
+    -- statt fire-and-forget TriggerServerEvent + TriggerClientEvent.
+    Citizen.CreateThread(function()
+        ESX.TriggerServerCallback('mtj_los:scratchCb', function(prize)
+            handlePrizeResult(prize, mySession)
+        end, data.itemName)
+    end)
 end)
 
 RegisterNUICallback('closeUI', function(_, cb)

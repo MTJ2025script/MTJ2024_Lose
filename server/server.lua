@@ -238,23 +238,21 @@ AddEventHandler('onServerResourceStart', function(resourceName)
 end)
 
 -- ============================================================
---  EVENT: Los aufrubbeln
+--  CALLBACK: Los aufrubbeln  (ESX.RegisterServerCallback)
+--  Zuverlässiger Request-Response statt fire-and-forget Events.
+--  Der Client ruft ESX.TriggerServerCallback → Server ruft cb(prize) →
+--  Client bekommt das Ergebnis direkt zurück, kein zweites TriggerClientEvent nötig.
 -- ============================================================
-RegisterNetEvent('mtj_los:server:scratch')
-AddEventHandler('mtj_los:server:scratch', function(itemName)
+ESX.RegisterServerCallback('mtj_los:scratchCb', function(source, cb, itemName)
     local src        = source
     local resultSent = false
 
-    -- Garantiert dass TriggerClientEvent genau EINMAL gefeuert wird,
-    -- egal an welcher Stelle der Handler endet (normal oder per Fehler).
     local function sendResult(prize)
         if resultSent then return end
         resultSent = true
-        TriggerClientEvent('mtj_los:client:result', src, prize)
+        cb(prize)
     end
 
-    -- xpcall fängt JEDEN unerwarteten Lua-Fehler ab.
-    -- Ohne xpcall stirbt der Handler silent → Client bleibt ewig eingefroren.
     local ok, err = xpcall(function()
 
         local xPlayer = ESX.GetPlayerFromId(src)
@@ -295,69 +293,62 @@ AddEventHandler('mtj_los:server:scratch', function(itemName)
         print(('[MTJ Los] Spieler %s kratzt %s → rollt Preis: type=%s label=%s'):format(
             src, itemName, tostring(prize.type), tostring(prize.label)))
 
-        -- Ergebnis SOFORT an Client senden – VOR der Preis-Vergabe und VOR dem DB-Insert.
-        -- addMoney / addInventoryItem können intern Citizen.Wait nutzen und so den
-        -- Lua-Thread pausieren. Ohne dieses Early-Return würde der JS-Timeout feuern,
-        -- bevor der Client überhaupt ein Result empfängt.
+        -- Ergebnis SOFORT per Callback zurückschicken – der Client bekommt
+        -- das Ergebnis bevor irgendwelche langsamen DB/Inventory-Ops starten.
         sendResult(prize)
 
-        -- Preis vergeben (pcall schützt vor ESX/ox-Inventory-Fehlern)
-        local prizeOk, prizeErr = pcall(function()
-            if prize.type == 'money' then
-                xPlayer.addMoney(prize.amount or 0)
-            elseif prize.type == 'item' then
-                if prize.item and prize.item ~= '' then
-                    addPlayerItem(src, xPlayer, prize.item, prize.amount or 1)
-                else
-                    print('[MTJ Los] WARNUNG: Preis-Typ "item" hat leeren item-Namen – Preis übersprungen')
+        -- Preis vergeben und DB-Insert in eigenem Thread (blockiert den Callback nicht).
+        Citizen.CreateThread(function()
+            local prizeOk, prizeErr = pcall(function()
+                if prize.type == 'money' then
+                    xPlayer.addMoney(prize.amount or 0)
+                elseif prize.type == 'item' then
+                    if prize.item and prize.item ~= '' then
+                        addPlayerItem(src, xPlayer, prize.item, prize.amount or 1)
+                    else
+                        print('[MTJ Los] WARNUNG: Preis-Typ "item" hat leeren item-Namen – Preis übersprungen')
+                    end
+                elseif prize.type == 'weapon' then
+                    if prize.weapon and prize.weapon ~= '' then
+                        addPlayerWeapon(src, xPlayer, prize.weapon, prize.ammo or 0)
+                    else
+                        print('[MTJ Los] WARNUNG: Preis-Typ "weapon" hat leeren weapon-Namen – Preis übersprungen')
+                    end
+                elseif prize.type == 'car' then
+                    if prize.model and prize.model ~= '' then
+                        TriggerClientEvent('mtj_los:client:spawnCar', src, prize.model, prize.label)
+                    else
+                        print('[MTJ Los] WARNUNG: Preis-Typ "car" hat leeren model-Namen – Preis übersprungen')
+                    end
                 end
-            elseif prize.type == 'weapon' then
-                if prize.weapon and prize.weapon ~= '' then
-                    addPlayerWeapon(src, xPlayer, prize.weapon, prize.ammo or 0)
-                else
-                    print('[MTJ Los] WARNUNG: Preis-Typ "weapon" hat leeren weapon-Namen – Preis übersprungen')
-                end
-            elseif prize.type == 'car' then
-                if prize.model and prize.model ~= '' then
-                    TriggerClientEvent('mtj_los:client:spawnCar', src, prize.model, prize.label)
-                else
-                    print('[MTJ Los] WARNUNG: Preis-Typ "car" hat leeren model-Namen – Preis übersprungen')
-                end
+            end)
+            if not prizeOk then
+                print(('[MTJ Los] FEHLER beim Preis vergeben: %s'):format(tostring(prizeErr)))
             end
+
+            local identifier = tostring(src)
+            local playerName = tostring(src)
+            pcall(function()
+                identifier = xPlayer.getIdentifier()
+                playerName = xPlayer.getName()
+            end)
+            print(('[MTJ Los] %s (%s) → %s → %s'):format(playerName, src, ticketCfg.label, tostring(prize.label)))
+
+            pcall(function()
+                exports['oxmysql']:insert(
+                    'INSERT INTO mtj_los_history (player_identifier, player_name, ticket_item, prize_type, prize_label) VALUES (?, ?, ?, ?, ?)',
+                    { identifier, playerName, itemName, prize.type, prize.label },
+                    function() end
+                )
+            end)
         end)
-
-        if not prizeOk then
-            print(('[MTJ Los] FEHLER beim Preis vergeben: %s'):format(tostring(prizeErr)))
-        end
-
-        -- Identifier und Name nur für DB-Insert – in eigenem pcall gesichert.
-        local identifier = tostring(src)
-        local playerName = tostring(src)
-        pcall(function()
-            identifier = xPlayer.getIdentifier()
-            playerName = xPlayer.getName()
-        end)
-
-        print(('[MTJ Los] %s (%s) → %s → %s'):format(playerName, src, ticketCfg.label, tostring(prize.label)))
-
-        -- Verlauf asynchron speichern (Fehler hier blockieren das Gameplay nicht)
-        local dbOk, dbErr = pcall(function()
-            exports['oxmysql']:insert(
-                'INSERT INTO mtj_los_history (player_identifier, player_name, ticket_item, prize_type, prize_label) VALUES (?, ?, ?, ?, ?)',
-                { identifier, playerName, itemName, prize.type, prize.label },
-                function() end
-            )
-        end)
-        if not dbOk then
-            print(('[MTJ Los] WARNUNG: DB-Insert fehlgeschlagen: %s'):format(tostring(dbErr)))
-        end
 
     end, function(e)
         return tostring(e) .. '\n' .. debug.traceback('', 2)
     end)
 
     if not ok then
-        print(('[MTJ Los] KRITISCHER FEHLER im scratch-Handler für Spieler %s:\n%s'):format(src, tostring(err)))
+        print(('[MTJ Los] KRITISCHER FEHLER im scratch-Callback für Spieler %s:\n%s'):format(src, tostring(err)))
         sendResult({ type = 'nothing', label = 'Interner Server-Fehler' })
     end
 end)
