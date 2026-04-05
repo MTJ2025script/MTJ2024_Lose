@@ -63,7 +63,7 @@ body {
     display: none;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.72);
+    background: rgba(0, 0, 0, 0.50);
     z-index: 1;
 }
 
@@ -72,7 +72,7 @@ body {
    ════════════════════════════════════════════════════════════ */
 #screen-agegate {
     background: radial-gradient(ellipse at center,
-        rgba(26,0,16,0.90) 0%, rgba(10,0,5,0.90) 60%, rgba(0,0,0,0.90) 100%);
+        rgba(26,0,16,0.63) 0%, rgba(10,0,5,0.63) 60%, rgba(0,0,0,0.63) 100%);
 }
 
 #age-box {
