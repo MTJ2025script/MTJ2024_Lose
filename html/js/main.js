@@ -314,7 +314,9 @@ function spawnTearParticles(parent, tearY, ticketW) {
 function sendScratchEvent(retries) {
     const attempt = retries || 0;
 
-    /* Fallback: Kamera-Freeze verhindern wenn Server kein Result schickt */
+    /* Fallback: Kamera-Freeze verhindern wenn Server kein Result schickt.
+       Lua Phase-1-Timer feuert bei 12 s – NUI timeout bei 11 s sorgt dafür
+       dass closeUI (fetch) zuerst ausgelöst wird und Lua sauber abbrechen kann. */
     if (attempt === 0) {
         debugLog('scratchTicket gesendet (Item: ' + currentItem + ')', 'info');
         resultTimeout = setTimeout(() => {
@@ -322,7 +324,7 @@ function sendScratchEvent(retries) {
                 debugLog('TIMEOUT: Kein Result vom Server – closeUI wird aufgerufen', 'error');
                 closeUI();
             }
-        }, 10000);
+        }, 11000);
     }
 
     fetch(`https://${window.location.hostname}/scratchTicket`, {

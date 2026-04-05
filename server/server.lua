@@ -264,14 +264,34 @@ AddEventHandler('mtj_los:server:scratch', function(itemName)
     local identifier = xPlayer.getIdentifier()
     local playerName = xPlayer.getName()
 
-    if prize.type == 'money' then
-        xPlayer.addMoney(prize.amount)
-    elseif prize.type == 'item' then
-        addPlayerItem(src, xPlayer, prize.item, prize.amount)
-    elseif prize.type == 'weapon' then
-        addPlayerWeapon(src, xPlayer, prize.weapon, prize.ammo or 0)
-    elseif prize.type == 'car' then
-        TriggerClientEvent('mtj_los:client:spawnCar', src, prize.model, prize.label)
+    print(('[MTJ Los] %s (%s) rollt Preis: type=%s label=%s'):format(playerName, src, prize.type, prize.label))
+
+    local prizeOk, prizeErr = pcall(function()
+        if prize.type == 'money' then
+            xPlayer.addMoney(prize.amount or 0)
+        elseif prize.type == 'item' then
+            if prize.item and prize.item ~= '' then
+                addPlayerItem(src, xPlayer, prize.item, prize.amount or 1)
+            else
+                print('[MTJ Los] WARNUNG: Preis-Typ "item" hat leeren item-Namen – Preis übersprungen')
+            end
+        elseif prize.type == 'weapon' then
+            if prize.weapon and prize.weapon ~= '' then
+                addPlayerWeapon(src, xPlayer, prize.weapon, prize.ammo or 0)
+            else
+                print('[MTJ Los] WARNUNG: Preis-Typ "weapon" hat leeren weapon-Namen – Preis übersprungen')
+            end
+        elseif prize.type == 'car' then
+            if prize.model and prize.model ~= '' then
+                TriggerClientEvent('mtj_los:client:spawnCar', src, prize.model, prize.label)
+            else
+                print('[MTJ Los] WARNUNG: Preis-Typ "car" hat leeren model-Namen – Preis übersprungen')
+            end
+        end
+    end)
+
+    if not prizeOk then
+        print(('[MTJ Los] FEHLER beim Preis vergeben: %s'):format(tostring(prizeErr)))
     end
 
     -- Verlauf speichern

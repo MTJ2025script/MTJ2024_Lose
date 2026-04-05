@@ -1,26 +1,34 @@
 local ESX = exports['es_extended']:getSharedObject()
 
 -- ============================================================
+--  FOKUS-STATE
+--  nuiFocusActive  – true solange NUI den Fokus hält
+--  resultArrived   – true sobald der Server ein Result schickt
+-- ============================================================
+local nuiFocusActive = false
+local resultArrived  = false
+
+local function releaseFocus()
+    nuiFocusActive = false
+    SetNuiFocus(false, false)
+end
+
+-- ============================================================
 --  TICKET ÖFFNEN
 --  Server sendet table { itemName, label, ticketBg }
 -- ============================================================
-local nuiSafetyTimer = false   -- guards against stuck NUI focus
-
 RegisterNetEvent('mtj_los:client:openTicket')
 AddEventHandler('mtj_los:client:openTicket', function(data)
+    nuiFocusActive = true
+    resultArrived  = false
     SetNuiFocus(true, true)
-    nuiSafetyTimer = true
 
-    -- Safety thread: release focus after 25 s if NUI never calls closeUI
+    -- Phase 1: Falls der Server innerhalb von 12 s kein Result schickt
+    --          → Fokus zwangsweise freigeben (Kamera-Freeze-Schutz)
     Citizen.CreateThread(function()
-        local waited = 0
-        while nuiSafetyTimer and waited < 25 do
-            Citizen.Wait(1000)
-            waited = waited + 1
-        end
-        if nuiSafetyTimer then
-            nuiSafetyTimer = false
-            SetNuiFocus(false, false)
+        Citizen.Wait(12000)
+        if nuiFocusActive and not resultArrived then
+            releaseFocus()
             SendNUIMessage({ action = 'forceClose' })
         end
     end)
@@ -38,12 +46,24 @@ end)
 -- ============================================================
 RegisterNetEvent('mtj_los:client:result')
 AddEventHandler('mtj_los:client:result', function(prize)
+    resultArrived = true   -- Phase-1-Timer wird damit inaktiv
+
     SendNUIMessage({
         action = 'showResult',
         win    = prize.type ~= 'nothing',
         label  = prize.label or '',
         image  = prize.image or '',
     })
+
+    -- Phase 2: Spieler hat 30 s Zeit das Ergebnis zu lesen.
+    --          Danach Fokus zwangsweise freigeben (Kamera-Freeze-Schutz).
+    Citizen.CreateThread(function()
+        Citizen.Wait(30000)
+        if nuiFocusActive then
+            releaseFocus()
+            SendNUIMessage({ action = 'forceClose' })
+        end
+    end)
 end)
 
 -- ============================================================
@@ -93,8 +113,7 @@ RegisterNUICallback('scratchTicket', function(data, cb)
 end)
 
 RegisterNUICallback('closeUI', function(_, cb)
-    nuiSafetyTimer = false
-    SetNuiFocus(false, false)
+    releaseFocus()
     TriggerServerEvent('mtj_los:server:cancelTicket')
     cb({ ok = true })
 end)
@@ -134,8 +153,7 @@ end, false)
 --  NOTFALL-EXIT: Kamera-Freeze beheben (/losclose oder F10)
 -- ============================================================
 RegisterCommand('losclose', function()
-    nuiSafetyTimer = false
-    SetNuiFocus(false, false)
+    releaseFocus()
     TriggerServerEvent('mtj_los:server:cancelTicket')
     SendNUIMessage({ action = 'forceClose' })
 end, false)
