@@ -6,7 +6,7 @@ local ESX = exports['es_extended']:getSharedObject()
 -- ============================================================
 RegisterNetEvent('mtj_los:client:openTicket')
 AddEventHandler('mtj_los:client:openTicket', function(data)
-    SetNuiFocus(true, false)   -- Maus-Focus, Tastatur bleibt im Spiel → Key-Bindings bleiben aktiv
+    SetNuiFocus(true, true)    -- Maus + NUI-Focus → Spieler kann rubbeln und klicken
     SendNUIMessage({
         action   = 'openTicket',
         itemName = data.itemName or data,
