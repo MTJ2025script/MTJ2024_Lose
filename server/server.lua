@@ -295,6 +295,12 @@ AddEventHandler('mtj_los:server:scratch', function(itemName)
         print(('[MTJ Los] Spieler %s kratzt %s → rollt Preis: type=%s label=%s'):format(
             src, itemName, tostring(prize.type), tostring(prize.label)))
 
+        -- Ergebnis SOFORT an Client senden – VOR der Preis-Vergabe und VOR dem DB-Insert.
+        -- addMoney / addInventoryItem können intern Citizen.Wait nutzen und so den
+        -- Lua-Thread pausieren. Ohne dieses Early-Return würde der JS-Timeout feuern,
+        -- bevor der Client überhaupt ein Result empfängt.
+        sendResult(prize)
+
         -- Preis vergeben (pcall schützt vor ESX/ox-Inventory-Fehlern)
         local prizeOk, prizeErr = pcall(function()
             if prize.type == 'money' then
@@ -323,10 +329,6 @@ AddEventHandler('mtj_los:server:scratch', function(itemName)
         if not prizeOk then
             print(('[MTJ Los] FEHLER beim Preis vergeben: %s'):format(tostring(prizeErr)))
         end
-
-        -- Ergebnis an Client – VOR dem DB-Insert und VOR getIdentifier/getName,
-        -- damit ESX-Methoden-Fehler den Client nie einfrieren.
-        sendResult(prize)
 
         -- Identifier und Name nur für DB-Insert – in eigenem pcall gesichert.
         local identifier = tostring(src)

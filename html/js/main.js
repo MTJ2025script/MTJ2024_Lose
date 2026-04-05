@@ -329,8 +329,7 @@ function sendScratchEvent(retries) {
     const attempt = retries || 0;
 
     /* Fallback: Kamera-Freeze verhindern wenn Server kein Result schickt.
-       Lua Phase-1-Timer feuert bei 12 s – NUI timeout bei 11 s sorgt dafür
-       dass closeUI (fetch) zuerst ausgelöst wird und Lua sauber abbrechen kann. */
+       Lua Phase-1-Timer feuert bei 90 s – NUI timeout bei 30 s als erste Sicherheitslinie. */
     if (attempt === 0) {
         debugLog('scratchTicket gesendet (Item: ' + currentItem + ')', 'info');
         resultTimeout = setTimeout(() => {
@@ -338,7 +337,7 @@ function sendScratchEvent(retries) {
                 debugLog('TIMEOUT: Kein Result vom Server – closeUI wird aufgerufen', 'error');
                 closeUI();
             }
-        }, 11000);
+        }, 30000);
     }
 
     fetch(`https://${window.location.hostname}/scratchTicket`, {
