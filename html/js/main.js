@@ -3,17 +3,11 @@
 /* ============================================================
    STATE
    ============================================================ */
-let currentItem       = null;
-let scratchDone       = false;
-let isScratching      = false;
-let canvas, ctx;
-let lastProgressCheck = 0;
-const SCRATCH_THRESHOLD      = 0.40;   // 40 % – einfacher zu erreichen als 48 %
-const PROGRESS_CHECK_INTERVAL = 100;
-let scratchHandlers   = null;
-let ageConfirmed      = false;
-let resultReceived    = false;
-let resultTimeout     = null;
+let currentItem    = null;
+let scratchDone    = false;
+let ageConfirmed   = false;
+let resultReceived = false;
+let resultTimeout  = null;
 
 /* ── pending ticket data (wartet auf Age-Gate) ── */
 let pendingTicket     = null;
@@ -37,25 +31,15 @@ function debugLog(msg, type) {
     while (panel.children.length > 30) panel.removeChild(panel.lastChild);
 }
 
-function updateDebugPanel(pct) {
+function updateDebugPanel() {
     const p = document.getElementById('debug-panel');
     if (!p) return;
     p.style.display = debugEnabled ? 'block' : 'none';
     if (!debugEnabled) return;
 
-    document.getElementById('dbg-item').textContent      = currentItem || '—';
-    document.getElementById('dbg-done').textContent      = scratchDone    ? '✓ JA' : '✗ NEIN';
-    document.getElementById('dbg-scratching').textContent= isScratching   ? '✓ JA' : '✗ NEIN';
-    document.getElementById('dbg-received').textContent  = resultReceived ? '✓ JA' : '✗ NEIN';
-    document.getElementById('dbg-threshold').textContent = (SCRATCH_THRESHOLD * 100).toFixed(0) + '%';
-
-    if (pct !== undefined) {
-        const v = (pct * 100).toFixed(1);
-        document.getElementById('dbg-pct').textContent = v + '%';
-        document.getElementById('dbg-bar-fill').style.width = Math.min(pct * 100, 100) + '%';
-        document.getElementById('dbg-bar-fill').style.background =
-            pct >= SCRATCH_THRESHOLD ? '#00ff00' : '#ffaa00';
-    }
+    document.getElementById('dbg-item').textContent     = currentItem || '—';
+    document.getElementById('dbg-done').textContent     = scratchDone    ? '✓ JA' : '✗ NEIN';
+    document.getElementById('dbg-received').textContent = resultReceived ? '✓ JA' : '✗ NEIN';
 }
 
 /* ============================================================
@@ -145,14 +129,23 @@ function openTicket(data) {
     }
 
     /* Label */
-    document.getElementById('ticket-name-label').textContent = data.label || 'LOS';
+    document.getElementById('tkt-name-label').textContent = data.label || 'LOS';
+
+    /* Seriennummer */
+    const serial = 'MTJ-' + Math.random().toString(36).substring(2, 6).toUpperCase()
+                 + '-' + String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+    const serialEl = document.getElementById('ticket-serial-display');
+    if (serialEl) serialEl.textContent = 'SER: ' + serial;
+
+    /* Tear-Button zurücksetzen */
+    const btn = document.getElementById('btn-tear');
+    if (btn) { btn.disabled = false; btn.style.opacity = ''; }
 
     /* Partikel */
     spawnBgSuits();
 
     showScreen('screen-ticket');
-
-    requestAnimationFrame(() => initScratchCanvas());
+    updateDebugPanel();
 }
 
 /* ── Casino-Hintergrund-Kartenzeichen ── */
@@ -174,180 +167,134 @@ function spawnBgSuits() {
 }
 
 /* ============================================================
-   RUBBELFELD (Canvas)
+   LOS AUFREISSEN
    ============================================================ */
-function removeScratchListeners() {
-    if (!canvas || !scratchHandlers) return;
-    canvas.removeEventListener('mousedown',  scratchHandlers.mousedown);
-    canvas.removeEventListener('mousemove',  scratchHandlers.mousemove);
-    canvas.removeEventListener('mouseup',    scratchHandlers.mouseup);
-    canvas.removeEventListener('mouseleave', scratchHandlers.mouseleave);
-    canvas.removeEventListener('touchstart', scratchHandlers.touchstart);
-    canvas.removeEventListener('touchmove',  scratchHandlers.touchmove);
-    canvas.removeEventListener('touchend',   scratchHandlers.touchend);
-    scratchHandlers = null;
-}
-
-function initScratchCanvas() {
-    removeScratchListeners();
-
-    const zone = document.getElementById('scratch-zone');
-    canvas = document.getElementById('scratch-canvas');
-    ctx    = canvas.getContext('2d', { willReadFrequently: true });
-
-    const w = zone.offsetWidth  || 400;
-    const h = zone.offsetHeight || 110;
-    canvas.width  = w;
-    canvas.height = h;
-
-    debugLog('Canvas init: ' + w + 'x' + h, 'info');
-
-    /* Silber-Metallic Schicht */
-    const grad = ctx.createLinearGradient(0, 0, w, h);
-    grad.addColorStop(0,   '#9a9a9a');
-    grad.addColorStop(0.2, '#d0d0d0');
-    grad.addColorStop(0.35,'#f2f2f2');
-    grad.addColorStop(0.5, '#e8e8e8');
-    grad.addColorStop(0.65,'#d5d5d5');
-    grad.addColorStop(0.8, '#c0c0c0');
-    grad.addColorStop(1,   '#989898');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, w, h);
-
-    /* Feine Textur-Linien */
-    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-    ctx.lineWidth   = 0.5;
-    for (let x = 0; x < w; x += 3) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x + h * 0.3, h);
-        ctx.stroke();
-    }
-
-    /* Kartenzeichen-Muster */
-    ctx.fillStyle = 'rgba(80,80,80,0.06)';
-    ctx.font      = '11px serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    const suits = ['♠','♥','♦','♣'];
-    let si = 0;
-    for (let cx = 30; cx < w - 20; cx += 40) {
-        for (let cy = 18; cy < h - 10; cy += 30) {
-            ctx.fillText(suits[si % 4], cx, cy);
-            si++;
-        }
-    }
-
-    /* Rubbeltext */
-    ctx.fillStyle = 'rgba(50,50,50,0.5)';
-    ctx.font      = 'bold 13px Segoe UI, Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('✨ HIER RUBBELN – JETZT GLÜCK HERAUSRUBBELN! ✨', w / 2, h / 2);
-
-    /* Event-Handler */
-    scratchHandlers = {
-        mousedown:  startScratch,
-        mousemove:  doScratch,
-        mouseup:    stopScratch,
-        mouseleave: stopScratch,
-        touchstart: (e) => { e.preventDefault(); startScratch(getTouchPos(e)); },
-        touchmove:  (e) => { e.preventDefault(); doScratch(getTouchPos(e));    },
-        touchend:   stopScratch,
-    };
-
-    canvas.addEventListener('mousedown',  scratchHandlers.mousedown);
-    canvas.addEventListener('mousemove',  scratchHandlers.mousemove);
-    canvas.addEventListener('mouseup',    scratchHandlers.mouseup);
-    canvas.addEventListener('mouseleave', scratchHandlers.mouseleave);
-    canvas.addEventListener('touchstart', scratchHandlers.touchstart, { passive: false });
-    canvas.addEventListener('touchmove',  scratchHandlers.touchmove,  { passive: false });
-    canvas.addEventListener('touchend',   scratchHandlers.touchend);
-
-    updateDebugPanel(0);
-}
-
-function getCanvasPos(e) {
-    const rect = canvas.getBoundingClientRect();
-    return {
-        x: (e.clientX - rect.left)  * (canvas.width  / rect.width),
-        y: (e.clientY - rect.top)   * (canvas.height / rect.height),
-    };
-}
-
-function getTouchPos(e) {
-    return e.touches ? e.touches[0] : e;
-}
-
-function startScratch(e) {
+function tearTicket() {
     if (scratchDone) return;
-    isScratching = true;
-    erase(getCanvasPos(e));
+    scratchDone = true;
+
+    const btn = document.getElementById('btn-tear');
+    if (btn) { btn.disabled = true; }
+
+    debugLog('Los wird aufgerissen: ' + currentItem, 'info');
+
+    const card = document.getElementById('ticket-card');
+    const wrap = document.getElementById('ticket-wrap');
+
+    /* Phase 1 – Schütteln */
+    card.classList.add('ticket-shaking');
+
+    setTimeout(() => {
+        card.classList.remove('ticket-shaking');
+
+        /* Phase 2 – Bildschirm-Flash */
+        const flash = document.createElement('div');
+        flash.id = 'tear-flash';
+        document.getElementById('app').appendChild(flash);
+        setTimeout(() => { if (flash.parentNode) flash.remove(); }, 450);
+
+        /* Phase 3 – Ticket in zwei Hälften spalten */
+        const rect    = card.getBoundingClientRect();
+        const wrapRect = wrap.getBoundingClientRect();
+        const offsetTop = rect.top - wrapRect.top;
+        const halfH   = Math.round(rect.height / 2);
+        const w       = rect.width;
+
+        function makePiece(clipTop) {
+            const div = document.createElement('div');
+            div.className = 'tear-piece';
+            const top = clipTop ? offsetTop : offsetTop + halfH;
+            div.style.cssText = [
+                'position:absolute',
+                'left:0',
+                'top:' + top + 'px',
+                'width:' + w + 'px',
+                'height:' + halfH + 'px',
+                'overflow:hidden',
+                'z-index:50',
+                'pointer-events:none',
+                'will-change:transform,opacity',
+                'border-radius:' + (clipTop ? '22px 22px 0 0' : '0 0 22px 22px'),
+            ].join(';');
+            const clone = card.cloneNode(true);
+            clone.removeAttribute('id');
+            clone.style.cssText = [
+                'position:absolute',
+                'top:' + (clipTop ? '0' : '-' + halfH + 'px'),
+                'left:0',
+                'width:' + w + 'px',
+                'margin:0',
+                'animation:none',
+            ].join(';');
+            div.appendChild(clone);
+            return div;
+        }
+
+        const topDiv = makePiece(true);
+        const botDiv = makePiece(false);
+
+        card.style.visibility = 'hidden';
+        wrap.style.position   = 'relative';
+        wrap.appendChild(topDiv);
+        wrap.appendChild(botDiv);
+
+        /* Partikel-Explosion am Riss */
+        spawnTearParticles(wrap, offsetTop + halfH, w);
+
+        /* Hälften animieren */
+        requestAnimationFrame(() => {
+            topDiv.style.transition = 'transform .80s cubic-bezier(.55,.06,.68,.19), opacity .80s ease';
+            topDiv.style.transform  = 'translateY(-240px) translateX(-30px) rotate(-16deg) scale(.88)';
+            topDiv.style.opacity    = '0';
+
+            botDiv.style.transition = 'transform .80s cubic-bezier(.55,.06,.68,.19), opacity .80s ease';
+            botDiv.style.transform  = 'translateY(240px) translateX(30px) rotate(12deg) scale(.88)';
+            botDiv.style.opacity    = '0';
+        });
+
+        /* Server-Event senden */
+        setTimeout(() => sendScratchEvent(0), 380);
+
+    }, 450);
 }
 
-function doScratch(e) {
-    if (!isScratching || scratchDone) return;
-    erase(getCanvasPos(e));
-    const now = Date.now();
-    if (now - lastProgressCheck >= PROGRESS_CHECK_INTERVAL) {
-        lastProgressCheck = now;
-        checkScratchProgress();
-    }
-}
+function spawnTearParticles(parent, tearY, ticketW) {
+    const colors = ['#f5d060','#ffe566','#c9a84c','#ffffff','#ff6b35','#ff4040','#aa00ff','#00c8ff'];
+    for (let i = 0; i < 80; i++) {
+        const p     = document.createElement('div');
+        p.className = 'tear-particle';
+        const angle  = Math.random() * Math.PI * 2;
+        const speed  = 70 + Math.random() * 210;
+        const size   = 3 + Math.random() * 7;
+        const color  = colors[Math.floor(Math.random() * colors.length)];
+        const startX = ticketW * 0.2 + Math.random() * ticketW * 0.6;
+        const dur    = 500 + Math.random() * 750;
+        const shape  = Math.random() > 0.45 ? '50%' : (2 + Math.random() * 3) + 'px';
 
-function stopScratch() {
-    isScratching = false;
-    if (!scratchDone) checkScratchProgress();
-}
+        p.style.cssText = [
+            'position:absolute',
+            'left:'   + startX + 'px',
+            'top:'    + tearY  + 'px',
+            'width:'  + size   + 'px',
+            'height:' + size   + 'px',
+            'border-radius:' + shape,
+            'background:'    + color,
+            'box-shadow:0 0 ' + (size * 2) + 'px ' + color,
+            'pointer-events:none',
+            'z-index:60',
+            'opacity:1',
+        ].join(';');
 
-function erase(pos) {
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.beginPath();
-    ctx.arc(pos.x, pos.y, 32, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalCompositeOperation = 'source-over';
-}
+        parent.appendChild(p);
 
-/* ── Fortschrittsbalken ── */
-function updateProgressBar(pct) {
-    const bar = document.getElementById('scratch-progress-bar');
-    if (!bar) return;
-    bar.style.width = Math.min(pct * 100, 100) + '%';
-    bar.style.background = pct >= SCRATCH_THRESHOLD
-        ? 'linear-gradient(90deg,#22c55e,#4ade80)'
-        : 'linear-gradient(90deg,#c9a84c,#f5d060)';
-}
+        const tx = Math.cos(angle) * speed;
+        const ty = Math.sin(angle) * speed - 30;
 
-/* ── Scratch-Prozent berechnen ── */
-function getScratchPercent() {
-    if (!canvas || !ctx || !canvas.width || !canvas.height) return 0;
-    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-    let cleared = 0;
-    const total  = canvas.width * canvas.height;
-    for (let i = 3; i < imgData.length; i += 4) {
-        if (imgData[i] === 0) cleared++;
-    }
-    return cleared / total;
-}
-
-function checkScratchProgress() {
-    /* Null-Guard: Canvas noch nicht bereit */
-    if (!canvas || !ctx || !canvas.width || !canvas.height) {
-        debugLog('checkScratchProgress: Canvas nicht bereit!', 'error');
-        return;
-    }
-
-    const pct = getScratchPercent();
-    updateDebugPanel(pct);
-    updateProgressBar(pct);
-
-    if (pct >= SCRATCH_THRESHOLD) {
-        scratchDone = true;
-        removeScratchListeners();
-        canvas.style.transition = 'opacity 0.5s ease';
-        canvas.style.opacity    = '0';
-        debugLog('Schwelle erreicht (' + (pct * 100).toFixed(1) + '%) → Event wird gesendet', 'ok');
-        setTimeout(sendScratchEvent, 250);
+        const anim = p.animate([
+            { transform: 'translate(0,0) scale(1)', opacity: 1 },
+            { transform: 'translate(' + tx + 'px,' + ty + 'px) scale(0)', opacity: 0 },
+        ], { duration: dur, easing: 'cubic-bezier(.17,.67,.4,1)', fill: 'forwards' });
+        anim.onfinish = () => { if (p.parentNode) p.remove(); };
     }
 }
 
@@ -473,14 +420,16 @@ function sendCloseCallback(attempt) {
 
 function resetUI() {
     scratchDone       = false;
-    isScratching      = false;
-    lastProgressCheck = 0;
     currentItem       = null;
     resultReceived    = false;
     if (resultTimeout) { clearTimeout(resultTimeout); resultTimeout = null; }
 
-    removeScratchListeners();
-    updateProgressBar(0);
+    /* Aufgerissene Teile + Flash entfernen */
+    document.querySelectorAll('.tear-piece').forEach(el => el.remove());
+    const tearFlash = document.getElementById('tear-flash');
+    if (tearFlash) tearFlash.remove();
+    const card = document.getElementById('ticket-card');
+    if (card) { card.style.visibility = ''; card.classList.remove('ticket-shaking'); }
 
     const coinRain = document.getElementById('coin-rain');
     if (coinRain) coinRain.innerHTML = '';
@@ -488,19 +437,13 @@ function resetUI() {
     const prizeImg = document.getElementById('prize-img');
     if (prizeImg)  prizeImg.src = '';
 
-    if (canvas && ctx) {
-        canvas.style.transition = '';
-        canvas.style.opacity    = '1';
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
-
     const particles = document.getElementById('casino-bg-particles');
     if (particles) particles.innerHTML = '';
 
     document.body.style.display       = 'none';
     document.body.style.pointerEvents = 'none';
 
-    updateDebugPanel(0);
+    updateDebugPanel();
     debugLog('UI zurückgesetzt', 'info');
 }
 
