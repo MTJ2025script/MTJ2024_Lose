@@ -244,6 +244,11 @@ AddEventHandler('mtj_los:server:scratch', function(itemName)
         return
     end
 
+    if not configReady then
+        TriggerClientEvent('mtj_los:client:result', src, { type = 'nothing', label = 'Server lädt noch – bitte kurz warten' })
+        return
+    end
+
     if pendingScratches[src] ~= itemName then
         TriggerClientEvent('mtj_los:client:result', src, { type = 'nothing', label = 'Kein gültiges Los' })
         return
@@ -261,11 +266,13 @@ AddEventHandler('mtj_los:server:scratch', function(itemName)
         TriggerClientEvent('mtj_los:client:result', src, { type = 'nothing', label = 'Kein Preis verfügbar' })
         return
     end
+
     local identifier = xPlayer.getIdentifier()
     local playerName = xPlayer.getName()
 
     print(('[MTJ Los] %s (%s) rollt Preis: type=%s label=%s'):format(playerName, src, prize.type, prize.label))
 
+    -- Preis vergeben (pcall schützt vor silent crashes)
     local prizeOk, prizeErr = pcall(function()
         if prize.type == 'money' then
             xPlayer.addMoney(prize.amount or 0)
@@ -294,15 +301,22 @@ AddEventHandler('mtj_los:server:scratch', function(itemName)
         print(('[MTJ Los] FEHLER beim Preis vergeben: %s'):format(tostring(prizeErr)))
     end
 
-    -- Verlauf speichern
-    exports['oxmysql']:insert(
-        'INSERT INTO mtj_los_history (player_identifier, player_name, ticket_item, prize_type, prize_label) VALUES (?, ?, ?, ?, ?)',
-        { identifier, playerName, itemName, prize.type, prize.label },
-        function() end
-    )
-
+    -- Ergebnis sofort an Client senden – MUSS vor dem DB-Insert stehen,
+    -- damit ein oxmysql-Fehler den Client nie im Freeze lässt.
     TriggerClientEvent('mtj_los:client:result', src, prize)
     print(('[MTJ Los] %s (%s) → %s → %s'):format(playerName, src, ticketCfg.label, prize.label))
+
+    -- Verlauf asynchron speichern (Fehler hier blockieren das Gameplay nicht)
+    local dbOk, dbErr = pcall(function()
+        exports['oxmysql']:insert(
+            'INSERT INTO mtj_los_history (player_identifier, player_name, ticket_item, prize_type, prize_label) VALUES (?, ?, ?, ?, ?)',
+            { identifier, playerName, itemName, prize.type, prize.label },
+            function() end
+        )
+    end)
+    if not dbOk then
+        print(('[MTJ Los] WARNUNG: DB-Insert fehlgeschlagen (Gameplay nicht betroffen): %s'):format(tostring(dbErr)))
+    end
 end)
 
 -- ============================================================
