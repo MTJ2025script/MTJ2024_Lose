@@ -2,14 +2,11 @@ local ESX = exports['es_extended']:getSharedObject()
 
 -- ============================================================
 --  FOKUS-STATE
---  nuiFocusActive  – true solange NUI den Fokus hält
---  resultArrived   – true sobald der Server ein Result schickt
---  focusSession    – Zähler: verhindert dass alte Phase-Timer
---                    neue Ticket- oder Admin-Sessions stören
 -- ============================================================
 local nuiFocusActive = false
 local resultArrived  = false
 local focusSession   = 0
+local pendingPrize   = nil   -- vom Server vorgewürfelter Prize
 
 local function releaseFocus()
     nuiFocusActive = false
@@ -17,8 +14,7 @@ local function releaseFocus()
 end
 
 -- ============================================================
---  TICKET ÖFFNEN
---  Server sendet table { itemName, label, ticketBg }
+--  TICKET ÖFFNEN – Prize kommt bereits mit dem Event
 -- ============================================================
 RegisterNetEvent('mtj_los:client:openTicket')
 AddEventHandler('mtj_los:client:openTicket', function(data)
@@ -27,11 +23,17 @@ AddEventHandler('mtj_los:client:openTicket', function(data)
 
     nuiFocusActive = true
     resultArrived  = false
+
+    -- Prize lokal speichern – wird in scratchTicket NUI-Callback genutzt
+    pendingPrize = {
+        win   = data.prizeWin,
+        label = data.prizeLabel or '',
+        image = data.prizeImage or '',
+    }
+
     SetNuiFocus(true, true)
 
-    -- Phase 1: Falls der Spieler das Los nie aufrubbelt oder innerhalb von 90 s
-    --          kein Server-Result ankommt → Fokus zwangsweise freigeben.
-    --          90 s lassen genug Puffer für Age-Gate-Bestätigung + Server-Latenz.
+    -- Sicherheits-Timeout: 90 s
     Citizen.CreateThread(function()
         Citizen.Wait(90000)
         if focusSession == mySession and nuiFocusActive and not resultArrived then
@@ -55,11 +57,11 @@ local function handlePrizeResult(prize)
     if resultArrived then return end
     resultArrived = true
 
-    prize = prize or { type = 'nothing', label = '' }
+    prize = prize or { win = false, label = '' }
 
     SendNUIMessage({
         action = 'showResult',
-        win    = prize.type ~= 'nothing',
+        win    = prize.win,
         label  = prize.label or '',
         image  = prize.image or '',
     })
@@ -83,11 +85,30 @@ AddEventHandler('mtj_los:client:serverDebug', function(msg)
 end)
 
 -- ============================================================
---  SERVER → CLIENT: Ergebnis nach dem Kratzen
+--  NUI CALLBACKS – Spieler
 -- ============================================================
-RegisterNetEvent('mtj_los:client:result')
-AddEventHandler('mtj_los:client:result', function(prize)
-    handlePrizeResult(prize)
+RegisterNUICallback('scratchTicket', function(_, cb)
+    -- Prize wurde beim Öffnen lokal gespeichert → sofort an NUI senden
+    -- Kein Server-Roundtrip, kein Warten, kein Timeout-Problem
+    local prize = pendingPrize
+    pendingPrize = nil
+
+    if prize then
+        handlePrizeResult(prize)
+    else
+        -- Fallback: sollte nicht vorkommen
+        handlePrizeResult({ win = false, label = 'Fehler: Kein Preis gefunden' })
+    end
+
+    -- Server asynchron informieren (Preis vergeben, DB-Log)
+    TriggerServerEvent('mtj_los:server:scratch')
+    cb({ ok = true })
+end)
+
+RegisterNUICallback('closeUI', function(_, cb)
+    releaseFocus()
+    TriggerServerEvent('mtj_los:server:cancelTicket')
+    cb({ ok = true })
 end)
 
 -- ============================================================
@@ -126,23 +147,6 @@ end)
 RegisterNetEvent('mtj_los:admin:sendData')
 AddEventHandler('mtj_los:admin:sendData', function(payload)
     SendNUIMessage(payload)
-end)
-
--- ============================================================
---  NUI CALLBACKS – Spieler
--- ============================================================
-RegisterNUICallback('scratchTicket', function(data, cb)
-    -- TriggerServerEvent MUSS vor cb() stehen – in manchen FiveM-Builds
-    -- wird der Callback-Kontext nach cb() beendet und nachfolgender Code
-    -- wird nicht mehr ausgeführt.
-    TriggerServerEvent('mtj_los:server:scratch', tostring(data.itemName or ''))
-    cb({ ok = true })
-end)
-
-RegisterNUICallback('closeUI', function(_, cb)
-    releaseFocus()
-    TriggerServerEvent('mtj_los:server:cancelTicket')
-    cb({ ok = true })
 end)
 
 -- ============================================================

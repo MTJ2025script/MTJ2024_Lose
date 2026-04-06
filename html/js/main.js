@@ -333,12 +333,15 @@ function sendScratchEvent(retries) {
        Lua Phase-1-Timer feuert bei 90 s – NUI timeout bei 30 s als erste Sicherheitslinie. */
     if (attempt === 0) {
         debugLog('scratchTicket gesendet (Item: ' + currentItem + ')', 'info');
+        /* Prize kommt SOFORT nach Fetch-OK vom Client-Lua (kein Server-Roundtrip mehr).
+           5 s Sicherheitsnetz reichen aus. */
         resultTimeout = setTimeout(() => {
             if (!resultReceived) {
-                debugLog('TIMEOUT: Kein Result vom Server – closeUI wird aufgerufen', 'error');
+                debugLog('TIMEOUT: Kein Result erhalten – closeUI wird aufgerufen', 'error');
                 closeUI();
             }
-        }, 30000);
+        }, 5000);
+    }
     }
 
     fetch(`https://${window.location.hostname}/scratchTicket`, {

@@ -89,22 +89,33 @@ end
 
 -- ============================================================
 --  USABLE ITEMS REGISTRIEREN
+--  Prize wird SOFORT beim Item-Benutzen ausgewürfelt und dem
+--  Client mitgeteilt – kein weiterer Server-Roundtrip nötig.
 -- ============================================================
-local pendingScratches = {}
+local pendingResult = {}   -- [src] = { itemName, prize, ticketLabel }
 
 local function registerUsableItem(ticket)
     local t = ticket
     local handler = function(source)
-        if pendingScratches[source] then return end
+        if pendingResult[source] then return end
         local xPlayer = ESX.GetPlayerFromId(source)
         if not xPlayer then return end
         if not playerHasItem(source, xPlayer, t.itemName) then return end
         removePlayerItem(source, xPlayer, t.itemName)
-        pendingScratches[source] = t.itemName
+
+        local prize = rollPrize(t.prizes) or { type = 'nothing', label = 'Kein Preis', image = '' }
+        pendingResult[source] = { itemName = t.itemName, prize = prize, label = t.label }
+
+        print(('[MTJ Los] %s benutzt %s → Preis vorgewürfelt: %s'):format(
+            tostring(source), t.itemName, tostring(prize.label)))
+
         TriggerClientEvent('mtj_los:client:openTicket', source, {
-            itemName = t.itemName,
-            label    = t.label,
-            ticketBg = t.ticketBg,
+            itemName   = t.itemName,
+            label      = t.label,
+            ticketBg   = t.ticketBg,
+            prizeWin   = prize.type ~= 'nothing',
+            prizeLabel = prize.label or '',
+            prizeImage = prize.image or '',
         })
     end
 
@@ -238,115 +249,65 @@ AddEventHandler('onServerResourceStart', function(resourceName)
 end)
 
 -- ============================================================
---  EVENT: Los aufrubbeln
+--  EVENT: Los aufrubbeln – Preis vergeben + DB-Log
+--  Der Prize wurde bereits beim Item-Benutzen ausgewürfelt.
+--  Der Client zeigt das Ergebnis direkt ohne Server-Roundtrip.
+--  Dieses Event sorgt nur noch für die serverseitige Vergabe.
 -- ============================================================
 RegisterNetEvent('mtj_los:server:scratch')
-AddEventHandler('mtj_los:server:scratch', function(itemName)
+AddEventHandler('mtj_los:server:scratch', function()
     local src = source
-    print(('[MTJ Los] scratch event empfangen von src=%s item=%s'):format(tostring(src), tostring(itemName)))
+    print(('[MTJ Los] scratch bestätigt von src=%s'):format(tostring(src)))
 
-    local function dbg(msg)
-        print('[MTJ Los] ' .. tostring(msg))
-        TriggerClientEvent('mtj_los:client:serverDebug', src, tostring(msg))
+    local pending = pendingResult[src]
+    if not pending then
+        print(('[MTJ Los] WARNUNG: kein pendingResult für src=%s'):format(tostring(src)))
+        return
     end
+    pendingResult[src] = nil
 
-    local function sendResult(prize)
-        TriggerClientEvent('mtj_los:client:result', src, prize)
-    end
+    local xPlayer = ESX.GetPlayerFromId(src)
+    if not xPlayer then return end
 
-    local ok, err = xpcall(function()
+    local prize    = pending.prize
+    local itemName = pending.itemName
 
-        dbg('SERVER: event empfangen – src=' .. tostring(src) .. ' item=' .. tostring(itemName))
-
-        local xPlayer = ESX.GetPlayerFromId(src)
-        if not xPlayer then
-            dbg('SERVER FEHLER: xPlayer nil!')
-            sendResult({ type = 'nothing', label = 'Spieler nicht gefunden' })
-            return
-        end
-
-        if not configReady then
-            dbg('SERVER FEHLER: configReady=false')
-            sendResult({ type = 'nothing', label = 'Server lädt noch' })
-            return
-        end
-
-        dbg('SERVER: pendingScratches[' .. tostring(src) .. ']=' .. tostring(pendingScratches[src]))
-
-        if pendingScratches[src] ~= itemName then
-            dbg('SERVER FEHLER: pending mismatch! erwartet=' .. tostring(pendingScratches[src]) .. ' bekommen=' .. tostring(itemName))
-            sendResult({ type = 'nothing', label = 'Kein gültiges Los' })
-            return
-        end
-        pendingScratches[src] = nil
-
-        local ticketCfg = getTicketConfig(itemName)
-        if not ticketCfg then
-            dbg('SERVER FEHLER: kein TicketConfig für ' .. tostring(itemName))
-            sendResult({ type = 'nothing', label = 'Ungültiges Los' })
-            return
-        end
-
-        local prize = rollPrize(ticketCfg.prizes)
-        if not prize then
-            dbg('SERVER FEHLER: rollPrize nil')
-            sendResult({ type = 'nothing', label = 'Kein Preis verfügbar' })
-            return
-        end
-
-        dbg('SERVER: Preis ermittelt type=' .. tostring(prize.type) .. ' label=' .. tostring(prize.label))
-        sendResult(prize)
-        dbg('SERVER: result gesendet')
-
-        -- Preis vergeben + DB in eigenem Thread
-        Citizen.CreateThread(function()
-            local prizeOk, prizeErr = pcall(function()
-                if prize.type == 'money' then
-                    xPlayer.addMoney(prize.amount or 0)
-                elseif prize.type == 'item' then
-                    if prize.item and prize.item ~= '' then
-                        addPlayerItem(src, xPlayer, prize.item, prize.amount or 1)
-                    end
-                elseif prize.type == 'weapon' then
-                    if prize.weapon and prize.weapon ~= '' then
-                        addPlayerWeapon(src, xPlayer, prize.weapon, prize.ammo or 0)
-                    end
-                elseif prize.type == 'car' then
-                    if prize.model and prize.model ~= '' then
-                        TriggerClientEvent('mtj_los:client:spawnCar', src, prize.model, prize.label)
-                    end
-                end
-            end)
-            if not prizeOk then
-                print(('[MTJ Los] FEHLER Preis vergeben: %s'):format(tostring(prizeErr)))
+    local prizeOk, prizeErr = pcall(function()
+        if prize.type == 'money' then
+            xPlayer.addMoney(prize.amount or 0)
+        elseif prize.type == 'item' then
+            if prize.item and prize.item ~= '' then
+                addPlayerItem(src, xPlayer, prize.item, prize.amount or 1)
             end
-
-            local identifier = tostring(src)
-            local playerName = tostring(src)
-            pcall(function()
-                identifier = xPlayer.getIdentifier()
-                playerName = xPlayer.getName()
-            end)
-            print(('[MTJ Los] %s (%s) → %s → %s'):format(playerName, src, ticketCfg.label, tostring(prize.label)))
-
-            pcall(function()
-                exports['oxmysql']:insert(
-                    'INSERT INTO mtj_los_history (player_identifier, player_name, ticket_item, prize_type, prize_label) VALUES (?, ?, ?, ?, ?)',
-                    { identifier, playerName, itemName, prize.type, prize.label },
-                    function() end
-                )
-            end)
-        end)
-
-    end, function(e)
-        return tostring(e) .. '\n' .. debug.traceback('', 2)
+        elseif prize.type == 'weapon' then
+            if prize.weapon and prize.weapon ~= '' then
+                addPlayerWeapon(src, xPlayer, prize.weapon, prize.ammo or 0)
+            end
+        elseif prize.type == 'car' then
+            if prize.model and prize.model ~= '' then
+                TriggerClientEvent('mtj_los:client:spawnCar', src, prize.model, prize.label)
+            end
+        end
     end)
-
-    if not ok then
-        print(('[MTJ Los] KRITISCHER FEHLER scratch handler: %s'):format(tostring(err)))
-        TriggerClientEvent('mtj_los:client:serverDebug', src, 'SERVER KRITISCHER FEHLER: ' .. tostring(err))
-        TriggerClientEvent('mtj_los:client:result', src, { type = 'nothing', label = 'Server-Fehler' })
+    if not prizeOk then
+        print(('[MTJ Los] FEHLER Preis vergeben: %s'):format(tostring(prizeErr)))
     end
+
+    local identifier = tostring(src)
+    local playerName = tostring(src)
+    pcall(function()
+        identifier = xPlayer.getIdentifier()
+        playerName = xPlayer.getName()
+    end)
+    print(('[MTJ Los] %s (%s) → %s → %s'):format(playerName, src, itemName, tostring(prize.label)))
+
+    pcall(function()
+        exports['oxmysql']:insert(
+            'INSERT INTO mtj_los_history (player_identifier, player_name, ticket_item, prize_type, prize_label) VALUES (?, ?, ?, ?, ?)',
+            { identifier, playerName, itemName, prize.type, prize.label },
+            function() end
+        )
+    end)
 end)
 
 -- ============================================================
@@ -354,14 +315,14 @@ end)
 -- ============================================================
 RegisterNetEvent('mtj_los:server:cancelTicket')
 AddEventHandler('mtj_los:server:cancelTicket', function()
-    pendingScratches[source] = nil
+    pendingResult[source] = nil
 end)
 
 -- ============================================================
---  CLEANUP: pendingScratches bei Disconnect bereinigen
+--  CLEANUP: pendingResult bei Disconnect bereinigen
 -- ============================================================
 AddEventHandler('playerDropped', function()
-    pendingScratches[source] = nil
+    pendingResult[source] = nil
 end)
 
 -- ============================================================
