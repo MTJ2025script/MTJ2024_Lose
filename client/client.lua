@@ -13,6 +13,20 @@ local function releaseFocus()
 end
 
 -- ============================================================
+--  HELFER: RP-Notification
+-- ============================================================
+local function notify(msg, typ)
+    -- typ: 'success' | 'error' | 'info'  (wird für Farbe genutzt)
+    if typ == 'success' then
+        ESX.ShowNotification('~g~' .. msg)
+    elseif typ == 'error' then
+        ESX.ShowNotification('~r~' .. msg)
+    else
+        ESX.ShowNotification('~y~' .. msg)
+    end
+end
+
+-- ============================================================
 --  TICKET ÖFFNEN – Prize-Daten kommen mit dem Event
 --  Das NUI speichert die Prize-Daten selbst (pendingPrizeWin etc.)
 --  und zeigt sie direkt nach dem scratchTicket-fetch() an.
@@ -27,12 +41,15 @@ AddEventHandler('mtj_los:client:openTicket', function(data)
 
     SetNuiFocus(true, true)
 
+    notify('🎟 Du hast ein ' .. (data.label or 'Los') .. ' gezogen – reiß es auf!', 'info')
+
     -- Sicherheits-Timeout: 90 s (falls Spieler nie kratzt)
     Citizen.CreateThread(function()
         Citizen.Wait(90000)
         if focusSession == mySession and nuiFocusActive and not resultArrived then
             releaseFocus()
             SendNUIMessage({ action = 'forceClose' })
+            notify('⏱ Los abgelaufen – Kein Aufreißen innerhalb der Zeit.', 'error')
         end
     end)
 
@@ -51,18 +68,23 @@ end)
 --  NUI CALLBACKS – Spieler
 -- ============================================================
 RegisterNUICallback('scratchTicket', function(_, cb)
-    -- NUI zeigt das Ergebnis direkt aus fetch().then() an (Prize war schon im openTicket-Event).
-    -- Lua muss hier NUR den Server informieren und den Phase-1-Timeout stoppen.
     resultArrived = true
+
+    -- *** FOKUS SOFORT FREIGEBEN ***
+    -- Kamera bewegt sich wieder; die Win/Lose-Anzeige bleibt sichtbar.
+    -- Kein Warten auf Button-Klick – das war der Grund für den Freeze.
+    releaseFocus()
 
     -- Server: Preis vergeben + DB-Log
     TriggerServerEvent('mtj_los:server:scratch')
 
-    -- Auto-Close nach 30 s falls Spieler nicht klickt
+    -- Auto-Close nach 30 s falls Spieler nicht klickt.
+    -- SESSION-AWARE: mySession verhindert, dass dieser Timer
+    -- in eine neue Los-Session hineinschießt.
+    local mySession = focusSession
     Citizen.CreateThread(function()
         Citizen.Wait(30000)
-        if nuiFocusActive then
-            releaseFocus()
+        if focusSession == mySession then
             SendNUIMessage({ action = 'forceClose' })
         end
     end)
@@ -71,9 +93,31 @@ RegisterNUICallback('scratchTicket', function(_, cb)
 end)
 
 RegisterNUICallback('closeUI', function(_, cb)
+    -- Fokus wurde bereits in scratchTicket freigegeben.
+    -- Sicherheitshalber nochmal, falls closeUI direkt (z. B. Age-Gate "Nein") kommt.
     releaseFocus()
     TriggerServerEvent('mtj_los:server:cancelTicket')
     cb({ ok = true })
+end)
+
+-- ============================================================
+--  SERVER → CLIENT: Gewinn-/Niete-Notification
+-- ============================================================
+RegisterNetEvent('mtj_los:client:prizeNotify')
+AddEventHandler('mtj_los:client:prizeNotify', function(win, label)
+    if win then
+        notify('🎉 Glückwunsch! Du hast gewonnen: ' .. tostring(label), 'success')
+    else
+        notify('💸 Leider nichts. ' .. tostring(label) .. ' – Vielleicht beim nächsten Mal!', 'error')
+    end
+end)
+
+-- ============================================================
+--  SERVER → CLIENT: Debug-Nachrichten ans NUI weiterleiten
+-- ============================================================
+RegisterNetEvent('mtj_los:client:serverDebug')
+AddEventHandler('mtj_los:client:serverDebug', function(msg)
+    SendNUIMessage({ action = 'debug:serverMsg', msg = tostring(msg) })
 end)
 
 -- ============================================================

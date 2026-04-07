@@ -293,6 +293,12 @@ AddEventHandler('mtj_los:server:scratch', function()
         print(('[MTJ Los] FEHLER Preis vergeben: %s'):format(tostring(prizeErr)))
     end
 
+    -- RP-Notification an den Spieler senden
+    TriggerClientEvent('mtj_los:client:prizeNotify', src,
+        prize.type ~= 'nothing',
+        prize.label or ''
+    )
+
     local identifier = tostring(src)
     local playerName = tostring(src)
     pcall(function()

@@ -1009,6 +1009,22 @@ body {
     letter-spacing: 1px;
 }
 
+#win-hint, #lose-hint {
+    font-size: 10px;
+    color: rgba(255,255,255,0.3);
+    margin-top: 6px;
+    letter-spacing: 0.5px;
+}
+
+#win-hint kbd, #lose-hint kbd {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 3px;
+    padding: 1px 4px;
+    font-size: 9px;
+    font-family: monospace;
+}
+
 /* ════════════════════════════════════════════════════════════
    LOSE-SCREEN
    ════════════════════════════════════════════════════════════ */
