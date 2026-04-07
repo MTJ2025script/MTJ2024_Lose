@@ -41,7 +41,7 @@ AddEventHandler('mtj_los:client:openTicket', function(data)
 
     SetNuiFocus(true, true)
 
-    notify('🎟 Du hast ein ' .. (data.label or 'Los') .. ' gezogen – reiß es auf!', 'info')
+    notify('🎟 Du hast ein ' .. (data.label or 'Los') .. ' – reiß es auf!', 'info')
 
     -- Sicherheits-Timeout: 90 s (falls Spieler nie kratzt)
     Citizen.CreateThread(function()
