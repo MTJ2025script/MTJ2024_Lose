@@ -130,6 +130,65 @@ local function registerAllUsableItems()
     for _, ticket in ipairs(LiveTickets) do
         registerUsableItem(ticket)
     end
+
+    -- ============================================================
+    --  GENERISCHES LOS registrieren (ein Item → zufälliger Tier)
+    -- ============================================================
+    if not Config.GenericLos or not Config.GenericLos.enabled then return end
+
+    local gCfg = Config.GenericLos
+
+    local genericHandler = function(source)
+        if pendingResult[source] then return end
+        local xPlayer = ESX.GetPlayerFromId(source)
+        if not xPlayer then return end
+        if not playerHasItem(source, xPlayer, gCfg.itemName) then return end
+
+        -- Zufälligen Tier auswürfeln
+        local total = 0
+        for _, t in ipairs(gCfg.tierChances) do total = total + (t.chance or 0) end
+
+        local roll, cum = math.random(1, math.max(total, 1)), 0
+        local chosenItemName = gCfg.tierChances[#gCfg.tierChances].itemName
+        for _, t in ipairs(gCfg.tierChances) do
+            cum = cum + (t.chance or 0)
+            if roll <= cum then chosenItemName = t.itemName; break end
+        end
+
+        -- Ticket-Config des gewürfelten Tiers holen
+        local ticket = getTicketConfig(chosenItemName)
+        if not ticket then
+            print(('[MTJ Los] GenericLos: Tier "%s" nicht in LiveTickets gefunden!'):format(chosenItemName))
+            return
+        end
+
+        -- Generisches Los-Item entfernen
+        removePlayerItem(source, xPlayer, gCfg.itemName)
+
+        local prize = rollPrize(ticket.prizes) or { type = 'nothing', label = 'Kein Preis', image = '' }
+        pendingResult[source] = { itemName = ticket.itemName, prize = prize, label = ticket.label }
+
+        print(('[MTJ Los] %s benutzt generisches Los → Tier: %s → Preis: %s'):format(
+            tostring(source), chosenItemName, tostring(prize.label)))
+
+        TriggerClientEvent('mtj_los:client:openTicket', source, {
+            itemName   = ticket.itemName,
+            label      = ticket.label,
+            ticketBg   = ticket.ticketBg,
+            prizeWin   = prize.type ~= 'nothing',
+            prizeLabel = prize.label or '',
+            prizeImage = prize.image or '',
+        })
+    end
+
+    if useOxInventory then
+        exports.ox_inventory:RegisterUsableItem(gCfg.itemName, genericHandler)
+    else
+        ESX.RegisterUsableItem(gCfg.itemName, genericHandler)
+    end
+
+    print(('[MTJ Los] Generisches Los "%s" registriert (Tiers: %d)'):format(
+        gCfg.itemName, #gCfg.tierChances))
 end
 
 -- ============================================================

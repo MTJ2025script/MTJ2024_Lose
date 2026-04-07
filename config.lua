@@ -197,17 +197,54 @@ Config.Tickets = {
 }
 
 -- ============================================================
+--  GENERISCHES LOS  (ein Item, ein Preis im Shop)
+--  Wenn aktiviert: Spieler kauft "mtj_los" fuer einen Preis.
+--  Beim Benutzen wird per Zufall ein Tier (Silber/Gold/Platin)
+--  ausgewuerfelt – der Spieler weiss vorher nicht was er bekommt.
+--
+--  TierChances = relative Gewichtungen (nicht Prozent).
+--  Beispiel: silber=60 gold=30 platin=10 → Gesamt 100
+--    → Silber  60 % Wahrscheinlichkeit
+--    → Gold    30 % Wahrscheinlichkeit
+--    → Platin  10 % Wahrscheinlichkeit
+-- ============================================================
+
+Config.GenericLos = {
+    enabled   = true,                -- false = nur einzelne Los-Typen im Shop
+    itemName  = 'mtj_los',
+    label     = 'Los',
+    shopPrice = 1000,                -- ein einziger Kaufpreis
+
+    -- Welche Tiers können ausgewürfelt werden?
+    -- itemName muss mit einem Config.Tickets[].itemName übereinstimmen.
+    tierChances = {
+        { itemName = 'mtj_los_silber', chance = 60 },
+        { itemName = 'mtj_los_gold',   chance = 30 },
+        { itemName = 'mtj_los_platin', chance = 10 },
+    },
+}
+
+-- ============================================================
 --  SHOP-KIOSK EINTRAEGE  (fuer esx_shops / ox_target etc.)
---  Format: { itemName, label, price }
---  Muss manuell in deinem Shop-Script eingetragen werden,
---  ODER du nutzt die unten stehende automatische ox_target-Config.
+--  Muss manuell in deinem Shop-Script eingetragen werden.
 -- ============================================================
 
 Config.ShopItems = {}
-for _, ticket in ipairs(Config.Tickets) do
+
+-- Generisches Los hat Vorrang wenn aktiviert
+if Config.GenericLos.enabled then
     table.insert(Config.ShopItems, {
-        name  = ticket.itemName,
-        label = ticket.label,
-        price = ticket.shopPrice,
+        name  = Config.GenericLos.itemName,
+        label = Config.GenericLos.label,
+        price = Config.GenericLos.shopPrice,
     })
+else
+    -- Einzelne Tiers im Shop
+    for _, ticket in ipairs(Config.Tickets) do
+        table.insert(Config.ShopItems, {
+            name  = ticket.itemName,
+            label = ticket.label,
+            price = ticket.shopPrice,
+        })
+    end
 end

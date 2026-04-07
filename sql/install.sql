@@ -5,9 +5,10 @@
 
 -- ── Los-Items in die ESX items-Tabelle eintragen ───────────
 INSERT IGNORE INTO `items` (`name`, `label`, `weight`, `rare`, `can_remove`) VALUES
-    ('mtj_los_silber', 'Silber Los',  1, 0, 1),
-    ('mtj_los_gold',   'Gold Los',    1, 0, 1),
-    ('mtj_los_platin', 'Platin Los',  1, 1, 1);
+    ('mtj_los',        'Los',        1, 0, 1),
+    ('mtj_los_silber', 'Silber Los', 1, 0, 1),
+    ('mtj_los_gold',   'Gold Los',   1, 0, 1),
+    ('mtj_los_platin', 'Platin Los', 1, 1, 1);
 
 -- ── Ticket-Konfiguration (Admin-Tablet speichert hier) ─────
 CREATE TABLE IF NOT EXISTS `mtj_los_tickets` (
@@ -50,7 +51,12 @@ CREATE TABLE IF NOT EXISTS `mtj_los_history` (
     INDEX `idx_scratched_at` (`scratched_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- ── Optional: Items in esx_shops eintragen ─────────────────
+-- ── Optional: Generisches Los in esx_shops eintragen ──────
+-- (nur EINEN Eintrag wenn Config.GenericLos.enabled = true)
+-- INSERT INTO `shop_items` (`shop_id`, `item`, `price`) VALUES
+--     (1, 'mtj_los', 1000);
+--
+-- Oder einzelne Tiers wenn GenericLos deaktiviert:
 -- INSERT INTO `shop_items` (`shop_id`, `item`, `price`) VALUES
 --     (1, 'mtj_los_silber', 500),
 --     (1, 'mtj_los_gold',   2500),
