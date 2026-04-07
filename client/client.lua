@@ -6,7 +6,6 @@ local ESX = exports['es_extended']:getSharedObject()
 local nuiFocusActive = false
 local resultArrived  = false
 local focusSession   = 0
-local pendingPrize   = nil   -- vom Server vorgewürfelter Prize
 
 local function releaseFocus()
     nuiFocusActive = false
@@ -14,7 +13,9 @@ local function releaseFocus()
 end
 
 -- ============================================================
---  TICKET ÖFFNEN – Prize kommt bereits mit dem Event
+--  TICKET ÖFFNEN – Prize-Daten kommen mit dem Event
+--  Das NUI speichert die Prize-Daten selbst (pendingPrizeWin etc.)
+--  und zeigt sie direkt nach dem scratchTicket-fetch() an.
 -- ============================================================
 RegisterNetEvent('mtj_los:client:openTicket')
 AddEventHandler('mtj_los:client:openTicket', function(data)
@@ -24,16 +25,9 @@ AddEventHandler('mtj_los:client:openTicket', function(data)
     nuiFocusActive = true
     resultArrived  = false
 
-    -- Prize lokal speichern – wird in scratchTicket NUI-Callback genutzt
-    pendingPrize = {
-        win   = data.prizeWin,
-        label = data.prizeLabel or '',
-        image = data.prizeImage or '',
-    }
-
     SetNuiFocus(true, true)
 
-    -- Sicherheits-Timeout: 90 s
+    -- Sicherheits-Timeout: 90 s (falls Spieler nie kratzt)
     Citizen.CreateThread(function()
         Citizen.Wait(90000)
         if focusSession == mySession and nuiFocusActive and not resultArrived then
@@ -43,30 +37,28 @@ AddEventHandler('mtj_los:client:openTicket', function(data)
     end)
 
     SendNUIMessage({
-        action   = 'openTicket',
-        itemName = data.itemName or data,
-        label    = data.label    or '',
-        ticketBg = data.ticketBg or '',
+        action     = 'openTicket',
+        itemName   = data.itemName or data,
+        label      = data.label      or '',
+        ticketBg   = data.ticketBg   or '',
+        prizeWin   = data.prizeWin,
+        prizeLabel = data.prizeLabel or '',
+        prizeImage = data.prizeImage or '',
     })
 end)
 
 -- ============================================================
---  ERGEBNIS ANZEIGEN
+--  NUI CALLBACKS – Spieler
 -- ============================================================
-local function handlePrizeResult(prize)
-    if resultArrived then return end
+RegisterNUICallback('scratchTicket', function(_, cb)
+    -- NUI zeigt das Ergebnis direkt aus fetch().then() an (Prize war schon im openTicket-Event).
+    -- Lua muss hier NUR den Server informieren und den Phase-1-Timeout stoppen.
     resultArrived = true
 
-    prize = prize or { win = false, label = '' }
+    -- Server: Preis vergeben + DB-Log
+    TriggerServerEvent('mtj_los:server:scratch')
 
-    SendNUIMessage({
-        action = 'showResult',
-        win    = prize.win,
-        label  = prize.label or '',
-        image  = prize.image or '',
-    })
-
-    -- Phase 2: Spieler hat 30 s Zeit das Ergebnis zu lesen.
+    -- Auto-Close nach 30 s falls Spieler nicht klickt
     Citizen.CreateThread(function()
         Citizen.Wait(30000)
         if nuiFocusActive then
@@ -74,34 +66,7 @@ local function handlePrizeResult(prize)
             SendNUIMessage({ action = 'forceClose' })
         end
     end)
-end
 
--- ============================================================
---  SERVER → CLIENT: Debug-Nachrichten ans NUI weiterleiten
--- ============================================================
-RegisterNetEvent('mtj_los:client:serverDebug')
-AddEventHandler('mtj_los:client:serverDebug', function(msg)
-    SendNUIMessage({ action = 'debug:serverMsg', msg = tostring(msg) })
-end)
-
--- ============================================================
---  NUI CALLBACKS – Spieler
--- ============================================================
-RegisterNUICallback('scratchTicket', function(_, cb)
-    -- Prize wurde beim Öffnen lokal gespeichert → sofort an NUI senden
-    -- Kein Server-Roundtrip, kein Warten, kein Timeout-Problem
-    local prize = pendingPrize
-    pendingPrize = nil
-
-    if prize then
-        handlePrizeResult(prize)
-    else
-        -- Fallback: sollte nicht vorkommen
-        handlePrizeResult({ win = false, label = 'Fehler: Kein Preis gefunden' })
-    end
-
-    -- Server asynchron informieren (Preis vergeben, DB-Log)
-    TriggerServerEvent('mtj_los:server:scratch')
     cb({ ok = true })
 end)
 

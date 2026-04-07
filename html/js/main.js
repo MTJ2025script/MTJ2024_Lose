@@ -10,7 +10,14 @@ let resultReceived = false;
 let resultTimeout  = null;
 
 /* ── pending ticket data (wartet auf Age-Gate) ── */
-let pendingTicket     = null;
+let pendingTicket = null;
+
+/* ── Prize-Daten: vom Server bereits ausgewürfelt, in NUI gespeichert ──
+   Werden in handleOpenTicket gesetzt und direkt in sendScratchEvent
+   angezeigt – kein SendNUIMessage-Umweg, kein Warten auf Lua-Events. */
+let pendingPrizeWin   = false;
+let pendingPrizeLabel = '';
+let pendingPrizeImage = '';
 
 /* ── Debug ── */
 let debugEnabled = false;
@@ -103,6 +110,12 @@ function toggleDebug() {
 function handleOpenTicket(data) {
     document.body.style.display      = 'block';
     document.body.style.pointerEvents = 'auto';
+
+    /* Prize-Daten sofort speichern – unabhängig vom Age-Gate.
+       Server hat den Prize bereits ausgewürfelt und mitgesendet. */
+    pendingPrizeWin   = !!data.prizeWin;
+    pendingPrizeLabel = data.prizeLabel || '';
+    pendingPrizeImage = data.prizeImage || '';
 
     if (!ageConfirmed) {
         pendingTicket = data;
@@ -329,19 +342,8 @@ function spawnTearParticles(parent, tearY, ticketW) {
 function sendScratchEvent(retries) {
     const attempt = retries || 0;
 
-    /* Fallback: Kamera-Freeze verhindern wenn Server kein Result schickt.
-       Lua Phase-1-Timer feuert bei 90 s – NUI timeout bei 30 s als erste Sicherheitslinie. */
     if (attempt === 0) {
         debugLog('scratchTicket gesendet (Item: ' + currentItem + ')', 'info');
-        /* Prize kommt SOFORT nach Fetch-OK vom Client-Lua (kein Server-Roundtrip mehr).
-           5 s Sicherheitsnetz reichen aus. */
-        resultTimeout = setTimeout(() => {
-            if (!resultReceived) {
-                debugLog('TIMEOUT: Kein Result erhalten – closeUI wird aufgerufen', 'error');
-                closeUI();
-            }
-        }, 5000);
-    }
     }
 
     fetch(`https://${window.location.hostname}/scratchTicket`, {
@@ -349,11 +351,31 @@ function sendScratchEvent(retries) {
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ itemName: currentItem }),
     }).then(() => {
-        debugLog('scratchTicket Fetch OK', 'ok');
+        debugLog('scratchTicket Fetch OK – zeige Ergebnis direkt', 'ok');
+
+        /* Ergebnis SOFORT anzeigen – Prize wurde vom Server schon beim Item-Benutzen
+           ausgewürfelt und mit dem openTicket-Event gesendet. Wir brauchen keine
+           weitere Lua-Nachricht mehr. Direkt aus dem fetch().then() anzeigen. */
+        if (!resultReceived) {
+            showResult({
+                win:   pendingPrizeWin,
+                label: pendingPrizeLabel,
+                image: pendingPrizeImage,
+            });
+        }
     }).catch(() => {
         debugLog('scratchTicket Fetch FEHLER (Versuch ' + (attempt + 1) + ')', 'error');
         if (attempt < 3) {
             setTimeout(() => sendScratchEvent(attempt + 1), 500);
+        } else {
+            /* Alle Versuche fehlgeschlagen – trotzdem Ergebnis zeigen */
+            if (!resultReceived) {
+                showResult({
+                    win:   pendingPrizeWin,
+                    label: pendingPrizeLabel,
+                    image: pendingPrizeImage,
+                });
+            }
         }
     });
 }
