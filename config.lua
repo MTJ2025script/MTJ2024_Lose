@@ -30,61 +30,73 @@ Config.AdminGroups = { 'admin', 'superadmin' }
 --  Bilder kommen in: html/images/<dateiname>
 -- ============================================================
 
+-- ============================================================
+--  WAHRSCHEINLICHKEITS-UEBERSICHT (Generisches Los, 1.000 $)
+--
+--  Tier-Verteilung:  Silber 65 %  |  Gold 28 %  |  Platin 7 %
+--
+--  Silber-Gewinnchance : ~39 %  →  Ø Geld-Rueckfluss   ~82 $
+--  Gold-Gewinnchance   : ~31 %  →  Ø Geld-Rueckfluss  ~357 $
+--  Platin-Gewinnchance : ~30 %  →  Ø Geld-Rueckfluss 2.050 $
+--
+--  Gesamt Ø Rueckfluss : ~297 $  bei 1.000 $ Einsatz
+--  House Edge          : ~70 %   (Haus verdient langfristig)
+--
+--  Gewinnquote gesamt  : ~36 %   (1 von 3 Losen gewinnt ETWAS)
+--  → Spieler bleibt motiviert, ohne dass das Haus verliert.
+--
+--  Jackpot (80.000 $)  : 0,07 %  (~1 von 1.430 Losen)
+--  Auto-Gewinn         : 0,07 %  (~1 von 1.430 Losen)
+--  → Selten genug fuer RP-Server-Legenden.
+-- ============================================================
+
 Config.Tickets = {
 
     -- --------------------------------------------------------
     --  SILBER LOS
+    --  Haufige kleine Trostpreise  →  Spieler "gewinnt" oft
+    --  etwas und macht weiter, obwohl der Einsatz hoeher ist.
+    --  Gewinnchance ~39 %  |  Ø Geld-Rueckfluss ~82 $
     -- --------------------------------------------------------
     {
-        itemName  = 'mtj_los_silber',           -- ESX Item-Name
+        itemName  = 'mtj_los_silber',
         label     = 'Silber Los',
-        ticketBg  = 'ticket_silber.png',        -- Hintergrundbild des Tickets (html/images/)
-        shopPrice = 500,                        -- Kaufpreis in Shops (Dollar)
+        ticketBg  = 'ticket_silber.png',
+        shopPrice = 500,
 
-        -- "chance" sind relative Gewichtungen (kein striktes Prozent).
-        -- Die tatsaechliche Wahrscheinlichkeit = chance / Summe aller chances.
+        -- chance = relative Gewichtung. Summe = 100.
         prizes = {
-            {
-                type    = 'money',
-                amount  = 1000,
-                label   = '1.000 $',
-                image   = 'prize_money.png',
-                chance  = 20,
+            {   -- Trostgewinn – haefig, fuehlt sich gut an
+                type   = 'money', amount = 200,
+                label  = '200 $',  image  = 'prize_money.png',
+                chance = 20,
             },
-            {
-                type    = 'money',
-                amount  = 5000,
-                label   = '5.000 $',
-                image   = 'prize_money.png',
-                chance  = 8,
+            {   -- Kleiner Gewinn – "fast rentiert"
+                type   = 'money', amount = 600,
+                label  = '600 $',  image  = 'prize_money.png',
+                chance = 7,
             },
-            {
-                type    = 'item',
-                item    = 'bread',
-                amount  = 5,
-                label   = '5x Brot',
-                image   = 'prize_bread.png',
-                chance  = 15,
+            {   -- Sachpreis – fuehlt sich wie Gewinn an
+                type   = 'item',  item   = 'bread', amount = 5,
+                label  = '5x Brot', image = 'prize_bread.png',
+                chance = 7,
             },
-            {
-                type    = 'item',
-                item    = 'water',
-                amount  = 5,
-                label   = '5x Wasser',
-                image   = 'prize_water.png',
-                chance  = 10,
+            {   -- Sachpreis
+                type   = 'item',  item   = 'water', amount = 3,
+                label  = '3x Wasser', image = 'prize_water.png',
+                chance = 5,
             },
-            {
-                type    = 'nothing',
-                label   = 'Leider nichts gewonnen',
-                image   = '',
-                chance  = 47,
+            {   -- Niete – Mehrheit
+                type   = 'nothing', label = 'Leider nichts gewonnen',
+                image  = '', chance = 61,
             },
         },
     },
 
     -- --------------------------------------------------------
     --  GOLD LOS
+    --  Mittlere Gewinne moeglich, aber selten.
+    --  Gewinnchance ~31 %  |  Ø Geld-Rueckfluss ~357 $
     -- --------------------------------------------------------
     {
         itemName  = 'mtj_los_gold',
@@ -93,54 +105,43 @@ Config.Tickets = {
         shopPrice = 2500,
 
         prizes = {
-            {
-                type    = 'money',
-                amount  = 10000,
-                label   = '10.000 $',
-                image   = 'prize_money.png',
-                chance  = 15,
+            {   -- Trostgewinn
+                type   = 'money', amount = 800,
+                label  = '800 $',  image  = 'prize_money.png',
+                chance = 14,
             },
-            {
-                type    = 'money',
-                amount  = 50000,
-                label   = '50.000 $',
-                image   = 'prize_money.png',
-                chance  = 5,
+            {   -- Mittlerer Gewinn
+                type   = 'money', amount = 2500,
+                label  = '2.500 $', image = 'prize_money.png',
+                chance = 5,
             },
-            {
-                type    = 'weapon',
-                weapon  = 'WEAPON_PISTOL',
-                ammo    = 250,
-                label   = 'Pistole + 250 Schuss',
-                image   = 'prize_pistol.png',
-                chance  = 10,
+            {   -- Schoener Gewinn – selten
+                type   = 'money', amount = 6000,
+                label  = '6.000 $', image = 'prize_money.png',
+                chance = 2,
             },
-            {
-                type    = 'weapon',
-                weapon  = 'WEAPON_MICROSMG',
-                ammo    = 500,
-                label   = 'Micro SMG + 500 Schuss',
-                image   = 'prize_smg.png',
-                chance  = 3,
+            {   -- Waffe als Sachpreis
+                type   = 'weapon', weapon = 'WEAPON_PISTOL', ammo = 250,
+                label  = 'Pistole + 250 Schuss', image = 'prize_pistol.png',
+                chance = 4,
             },
-            {
-                type    = 'car',
-                model   = 'sultan',
-                label   = 'Sultan RS',
-                image   = 'prize_sultan.png',
-                chance  = 2,
+            {   -- Sachpreis
+                type   = 'item',  item   = 'bread', amount = 10,
+                label  = '10x Brot', image = 'prize_bread.png',
+                chance = 6,
             },
-            {
-                type    = 'nothing',
-                label   = 'Leider nichts gewonnen',
-                image   = '',
-                chance  = 65,
+            {   -- Niete – Mehrheit
+                type   = 'nothing', label = 'Leider nichts gewonnen',
+                image  = '', chance = 69,
             },
         },
     },
 
     -- --------------------------------------------------------
     --  PLATIN LOS
+    --  Grosse Gewinne moeglich – aber extrem selten.
+    --  Jackpot + Auto je ~1 % dieses Tiers = ~0,07 % gesamt.
+    --  Gewinnchance ~30 %  |  Ø Geld-Rueckfluss ~2.050 $
     -- --------------------------------------------------------
     {
         itemName  = 'mtj_los_platin',
@@ -149,48 +150,44 @@ Config.Tickets = {
         shopPrice = 10000,
 
         prizes = {
-            {
-                type    = 'money',
-                amount  = 100000,
-                label   = '100.000 $',
-                image   = 'prize_money.png',
-                chance  = 5,
+            {   -- Trostgewinn
+                type   = 'money', amount = 2500,
+                label  = '2.500 $',  image  = 'prize_money.png',
+                chance = 10,
             },
-            {
-                type    = 'weapon',
-                weapon  = 'WEAPON_CARBINERIFLE',
-                ammo    = 1000,
-                label   = 'Carbine Rifle + 1000 Schuss',
-                image   = 'prize_rifle.png',
-                chance  = 8,
+            {   -- Mittlerer Gewinn
+                type   = 'money', amount = 10000,
+                label  = '10.000 $', image  = 'prize_money.png',
+                chance = 4,
             },
-            {
-                type    = 'car',
-                model   = 'zentorno',
-                label   = 'Zentorno',
-                image   = 'prize_zentorno.png',
-                chance  = 2,
+            {   -- Grosser Gewinn
+                type   = 'money', amount = 30000,
+                label  = '30.000 $', image  = 'prize_money.png',
+                chance = 2,
             },
-            {
-                type    = 'car',
-                model   = 'adder',
-                label   = 'Adder (Bugatti)',
-                image   = 'prize_adder.png',
-                chance  = 1,
+            {   -- JACKPOT – Legende auf dem Server (~0,07 % gesamt)
+                type   = 'money', amount = 80000,
+                label  = '80.000 $ JACKPOT!', image = 'prize_money.png',
+                chance = 1,
             },
-            {
-                type    = 'item',
-                item    = 'goldbar',
-                amount  = 10,
-                label   = '10x Goldbarren',
-                image   = 'prize_gold.png',
-                chance  = 10,
+            {   -- Auto-Hauptgewinn – sichtbar auf dem Server (~0,07 % gesamt)
+                type  = 'car', model = 'sultan',
+                label = 'Sultan RS', image = 'prize_sultan.png',
+                chance = 1,
             },
-            {
-                type    = 'nothing',
-                label   = 'Leider nichts gewonnen',
-                image   = '',
-                chance  = 74,
+            {   -- Waffe als Sachpreis
+                type   = 'weapon', weapon = 'WEAPON_CARBINERIFLE', ammo = 500,
+                label  = 'Carbine Rifle + 500 Schuss', image = 'prize_rifle.png',
+                chance = 5,
+            },
+            {   -- Sachpreis
+                type   = 'item',  item = 'goldbar', amount = 5,
+                label  = '5x Goldbarren', image = 'prize_gold.png',
+                chance = 7,
+            },
+            {   -- Niete – Mehrheit
+                type   = 'nothing', label = 'Leider nichts gewonnen',
+                image  = '', chance = 70,
             },
         },
     },
