@@ -387,6 +387,15 @@ function showResult(data) {
     resultReceived = true;
     if (resultTimeout) { clearTimeout(resultTimeout); resultTimeout = null; }
 
+    /* Fokus SOFORT freigeben – unabhängig davon ob der scratchTicket-Fetch
+       vorher erfolgreich war. Verhindert den 60-s-Kamera-Freeze falls der
+       Lua-Callback nie gefeuert hat (FiveM CEF fetch-Fehler). */
+    fetch(`https://${window.location.hostname}/releaseFocusOnly`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({}),
+    }).catch(() => {});
+
     /* Body immer sichtbar machen – er könnte durch einen vorherigen forceClose
        auf display:none gesetzt worden sein, bevor das Ergebnis ankam. */
     document.body.style.display       = 'block';

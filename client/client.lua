@@ -93,8 +93,16 @@ RegisterNUICallback('scratchTicket', function(_, cb)
     cb({ ok = true })
 end)
 
+-- Wird von showResult() in der NUI sofort aufgerufen – unabhängig davon ob der
+-- scratchTicket-Fetch erfolgreich war. Stellt sicher dass Kamera/Input IMMER
+-- freigegeben werden sobald das Ergebnis angezeigt wird (kein 60-s-Freeze mehr).
+RegisterNUICallback('releaseFocusOnly', function(_, cb)
+    releaseFocus()
+    cb({ ok = true })
+end)
+
 RegisterNUICallback('closeUI', function(_, cb)
-    -- Fokus wurde bereits in scratchTicket freigegeben.
+    -- Fokus wurde bereits in scratchTicket oder releaseFocusOnly freigegeben.
     -- Sicherheitshalber nochmal, falls closeUI direkt (z. B. Age-Gate "Nein") kommt.
     releaseFocus()
     -- cancelTicket NUR senden wenn noch NICHT gekratzt wurde.
