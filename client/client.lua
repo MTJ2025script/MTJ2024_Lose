@@ -49,6 +49,7 @@ AddEventHandler('mtj_los:client:openTicket', function(data)
         if focusSession == mySession and nuiFocusActive and not resultArrived then
             releaseFocus()
             SendNUIMessage({ action = 'forceClose' })
+            TriggerServerEvent('mtj_los:server:cancelTicket')
             notify('⏱ Los abgelaufen – Kein Aufreißen innerhalb der Zeit.', 'error')
         end
     end)
@@ -96,7 +97,13 @@ RegisterNUICallback('closeUI', function(_, cb)
     -- Fokus wurde bereits in scratchTicket freigegeben.
     -- Sicherheitshalber nochmal, falls closeUI direkt (z. B. Age-Gate "Nein") kommt.
     releaseFocus()
-    TriggerServerEvent('mtj_los:server:cancelTicket')
+    -- cancelTicket NUR senden wenn noch NICHT gekratzt wurde.
+    -- Wenn scratchTicket bereits gesendet wurde (resultArrived=true), läuft der
+    -- Preis-Roundtrip bereits – ein cancelTicket würde pendingResult löschen bevor
+    -- der scratch-Handler es verarbeitet (Race Condition → kein Preis, kein Notify).
+    if not resultArrived then
+        TriggerServerEvent('mtj_los:server:cancelTicket')
+    end
     cb({ ok = true })
 end)
 
