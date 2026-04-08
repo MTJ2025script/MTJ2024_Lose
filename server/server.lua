@@ -83,8 +83,52 @@ local function addPlayerWeapon(src, xPlayer, weaponName, ammo)
     if useOxInventory then
         exports.ox_inventory:AddItem(src, weaponName:lower(), 1, { ammo = ammo or 0 })
     else
-        xPlayer.addWeapon(weaponName, ammo or 0)
+        -- ESX Legacy: Waffe als Inventar-Item (kompatibel mit esx_weaponshop etc.)
+        xPlayer.addInventoryItem(weaponName:lower(), 1)
     end
+end
+
+-- ============================================================
+--  HELFER: Zufälliges KFZ-Kennzeichen generieren
+-- ============================================================
+local function generatePlate()
+    local chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    local plate  = 'MTJ'
+    for _ = 1, 5 do
+        local idx = math.random(1, #chars)
+        plate = plate .. chars:sub(idx, idx)
+    end
+    return plate
+end
+
+-- ============================================================
+--  HELFER: Fahrzeug in Garage (owned_vehicles) eintragen
+-- ============================================================
+local function addPlayerCarToGarage(src, xPlayer, model, label)
+    local identifier = xPlayer.getIdentifier()
+    local plate      = generatePlate()
+    local vehicleJson = json.encode({
+        model  = model,
+        plate  = plate,
+        color1 = 0,
+        color2 = 0,
+    })
+
+    exports['oxmysql']:insert(
+        'INSERT INTO owned_vehicles (owner, plate, vehicle, type, stored) VALUES (?, ?, ?, ?, 1)',
+        { identifier, plate, vehicleJson, 'car' },
+        function(insertId)
+            if insertId and insertId > 0 then
+                TriggerClientEvent('mtj_los:client:carGaraged', src, plate, label)
+                print(('[MTJ Los] Fahrzeug %s → Garage von %s (Kennzeichen: %s)'):format(
+                    model, identifier, plate))
+            else
+                -- DB-Insert fehlgeschlagen → als Fallback direkt spawnen
+                TriggerClientEvent('mtj_los:client:spawnCar', src, model, label)
+                print(('[MTJ Los] WARN: owned_vehicles INSERT fehlgeschlagen → Fahrzeug gespawnt'))
+            end
+        end
+    )
 end
 
 -- ============================================================
@@ -333,18 +377,26 @@ AddEventHandler('mtj_los:server:scratch', function()
 
     local prizeOk, prizeErr = pcall(function()
         if prize.type == 'money' then
-            xPlayer.addMoney(prize.amount or 0)
+            -- Geld als Inventar-Item (Config.MoneyItem, Standard: 'money')
+            local moneyItem = Config.MoneyItem or 'money'
+            addPlayerItem(src, xPlayer, moneyItem, prize.amount or 0)
         elseif prize.type == 'item' then
             if prize.item and prize.item ~= '' then
                 addPlayerItem(src, xPlayer, prize.item, prize.amount or 1)
             end
         elseif prize.type == 'weapon' then
+            -- Waffe als Inventar-Item (ESX Legacy kompatibel)
             if prize.weapon and prize.weapon ~= '' then
                 addPlayerWeapon(src, xPlayer, prize.weapon, prize.ammo or 0)
             end
         elseif prize.type == 'car' then
             if prize.model and prize.model ~= '' then
-                TriggerClientEvent('mtj_los:client:spawnCar', src, prize.model, prize.label)
+                if Config.CarToGarage then
+                    -- Fahrzeug in Garage eintragen (eigene Notification + Kennzeichen)
+                    addPlayerCarToGarage(src, xPlayer, prize.model, prize.label or '')
+                else
+                    TriggerClientEvent('mtj_los:client:spawnCar', src, prize.model, prize.label)
+                end
             end
         end
     end)
@@ -352,11 +404,14 @@ AddEventHandler('mtj_los:server:scratch', function()
         print(('[MTJ Los] FEHLER Preis vergeben: %s'):format(tostring(prizeErr)))
     end
 
-    -- RP-Notification an den Spieler senden
-    TriggerClientEvent('mtj_los:client:prizeNotify', src,
-        prize.type ~= 'nothing',
-        prize.label or ''
-    )
+    -- RP-Notification – bei Car+Garage kommt die Notification mit Kennzeichen
+    -- aus addPlayerCarToGarage; hier nur für alle anderen Typen senden.
+    if prize.type ~= 'car' or not Config.CarToGarage then
+        TriggerClientEvent('mtj_los:client:prizeNotify', src,
+            prize.type ~= 'nothing',
+            prize.label or ''
+        )
+    end
 
     local identifier = tostring(src)
     local playerName = tostring(src)

@@ -13,6 +13,14 @@ Config.InventoryType = 'esx'
 -- Spawn-Offset fuer gewonnene Fahrzeuge (relativ zum Spieler)
 Config.CarSpawnOffset = { x = 5.0, y = 0.0, z = 0.0 }
 
+-- Item-Name fuer Geld-Gewinne (ESX Legacy: 'money' | andere: anpassen)
+Config.MoneyItem = 'money'
+
+-- Fahrzeug-Gewinn direkt in die Garage (owned_vehicles) eintragen?
+-- true  = Fahrzeug wird in der Garage gespeichert, kein Spawn
+-- false = Fahrzeug wird wie bisher direkt gespawnt
+Config.CarToGarage = true
+
 -- ============================================================
 --  ADMIN-TABLET EINSTELLUNGEN
 -- ============================================================

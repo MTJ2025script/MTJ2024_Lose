@@ -171,7 +171,15 @@ AddEventHandler('mtj_los:client:serverDebug', function(msg)
 end)
 
 -- ============================================================
---  FAHRZEUG SPAWNEN
+--  SERVER → CLIENT: Fahrzeug in Garage eingetragen
+-- ============================================================
+RegisterNetEvent('mtj_los:client:carGaraged')
+AddEventHandler('mtj_los:client:carGaraged', function(plate, label)
+    notify('🚗 ' .. tostring(label) .. ' in der Garage! Kennzeichen: ' .. tostring(plate), 'success')
+end)
+
+-- ============================================================
+--  FAHRZEUG SPAWNEN (Fallback wenn Config.CarToGarage = false)
 -- ============================================================
 RegisterNetEvent('mtj_los:client:spawnCar')
 AddEventHandler('mtj_los:client:spawnCar', function(model, label)
