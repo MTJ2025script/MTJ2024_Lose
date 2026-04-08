@@ -3,9 +3,10 @@ local ESX = exports['es_extended']:getSharedObject()
 -- ============================================================
 --  FOKUS-STATE
 -- ============================================================
-local nuiFocusActive = false
-local resultArrived  = false
-local focusSession   = 0
+local nuiFocusActive  = false
+local resultArrived   = false
+local focusSession    = 0
+local scratchSentAt   = 0    -- Zeitstempel (GetGameTimer) wann scratchTicket gesendet wurde
 
 local function releaseFocus()
     nuiFocusActive = false
@@ -38,19 +39,46 @@ AddEventHandler('mtj_los:client:openTicket', function(data)
 
     nuiFocusActive = true
     resultArrived  = false
+    scratchSentAt  = 0
 
     SetNuiFocus(true, true)
 
     notify('🎟 Du hast ein ' .. (data.label or 'Los') .. ' – reiß es auf!', 'info')
 
-    -- Sicherheits-Timeout: 90 s (falls Spieler nie kratzt)
+    -- Sicherheits-Timeout: 20 s (früher 90 s).
+    -- Wenn der Spieler innerhalb von 20 s nicht kratzt, wird das Los abgebrochen.
+    -- Kürzerer Wert = Worst-case-Freeze bei komplettem NUI-Fetch-Ausfall max. 20 s.
     Citizen.CreateThread(function()
-        Citizen.Wait(90000)
+        Citizen.Wait(20000)
         if focusSession == mySession and nuiFocusActive and not resultArrived then
             releaseFocus()
             SendNUIMessage({ action = 'forceClose' })
             TriggerServerEvent('mtj_los:server:cancelTicket')
             notify('⏱ Los abgelaufen – Kein Aufreißen innerhalb der Zeit.', 'error')
+        end
+    end)
+
+    -- Lua-seitiger Fallback-Timer: 12 s nachdem scratchTicket gesendet wurde.
+    -- Gibt Fokus frei OHNE auf einen NUI-Callback angewiesen zu sein.
+    -- Greift nur wenn beide NUI-Fetches (scratchTicket + releaseFocusOnly) scheitern.
+    Citizen.CreateThread(function()
+        while focusSession == mySession do
+            Citizen.Wait(1000)
+            -- scratchSentAt wird in scratchTicket-Callback gesetzt.
+            -- Falls NUI-Callbacks NICHT feuerten, setzt releaseFocusOnly scratchSentAt ebenfalls.
+            -- Falls weder scratchTicket noch releaseFocusOnly je ankamen: nach 12 s Fallback.
+            if scratchSentAt > 0 and nuiFocusActive then
+                local elapsed = GetGameTimer() - scratchSentAt
+                if elapsed >= 12000 then
+                    releaseFocus()
+                    -- Scratch-Event als letzter Fallback damit pendingResult gecleart wird.
+                    if not resultArrived then
+                        resultArrived = true
+                        TriggerServerEvent('mtj_los:server:scratch')
+                    end
+                    break
+                end
+            end
         end
     end)
 
@@ -70,10 +98,9 @@ end)
 -- ============================================================
 RegisterNUICallback('scratchTicket', function(_, cb)
     resultArrived = true
+    scratchSentAt = GetGameTimer()   -- Fallback-Timer starten
 
     -- *** FOKUS SOFORT FREIGEBEN ***
-    -- Kamera bewegt sich wieder; die Win/Lose-Anzeige bleibt sichtbar.
-    -- Kein Warten auf Button-Klick – das war der Grund für den Freeze.
     releaseFocus()
 
     -- Server: Preis vergeben + DB-Log
@@ -95,9 +122,17 @@ end)
 
 -- Wird von showResult() in der NUI sofort aufgerufen – unabhängig davon ob der
 -- scratchTicket-Fetch erfolgreich war. Stellt sicher dass Kamera/Input IMMER
--- freigegeben werden sobald das Ergebnis angezeigt wird (kein 60-s-Freeze mehr).
+-- freigegeben werden sobald das Ergebnis angezeigt wird (kein Freeze mehr).
 RegisterNUICallback('releaseFocusOnly', function(_, cb)
     releaseFocus()
+    scratchSentAt = GetGameTimer()   -- Fallback-Timer starten (auch wenn scratchTicket fehlschlug)
+    -- Fallback: scratchTicket-Callback hat nicht gefeuert → Scratch jetzt nachholen.
+    -- Stellt sicher dass pendingResult gecleart wird und der Spieler seinen Preis
+    -- erhält sowie das nächste Los nicht geblockt ist.
+    if not resultArrived then
+        resultArrived = true
+        TriggerServerEvent('mtj_los:server:scratch')
+    end
     cb({ ok = true })
 end)
 
